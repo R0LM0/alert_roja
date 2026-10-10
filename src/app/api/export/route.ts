@@ -21,7 +21,7 @@ export async function GET() {
       f.estaba_infectado ? 1 : 0,
     ].join(","),
   );
-  return new Response([cab, ...lineas].join("\n"), {
+  return new Response([cab, ...lineas].join("\n") + "\n", {
     headers: {
       "content-type": "text/csv; charset=utf-8",
       "content-disposition": 'attachment; filename="alerta-roja.csv"',

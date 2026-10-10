@@ -21,6 +21,14 @@ npm run dev
 npm test
 ```
 
+## Con Docker (valida todo el flujo)
+
+```bash
+docker compose up --build   # Postgres 16 + app en http://localhost:3000
+```
+
+El `Dockerfile` corre los tests durante el build. `src/lib/db.ts` usa el driver de Neon si la URL contiene `neon.tech` y `pg` estándar en cualquier otro caso (docker/local).
+
 ## Despliegue en Vercel
 
 1. Importá el repo en Vercel.
