@@ -27,8 +27,8 @@ Next.js 15 (App Router) · TypeScript estricto · Tailwind v4 + Radix · Motion 
 src/
   app/            Rutas: / (inicio), /jugar, /resultado, /panel y /api/* (partidas, stats, ranking, export)
   components/     UI sin cálculos: game/, resultado/, panel/, three/, ui/
-  lib/            Lógica pura y testeada: stats, ronda, resultado, formula-bayes, panel, csv, cola-offline, rate-limit, db
-db/migrations/    001_init.sql (partidas + respuestas)
+  lib/            Lógica pura y testeada: stats, ronda, resultado, formula-bayes, panel, ranking, export-xlsx, csv, cola-offline, rate-limit, db
+db/migrations/    001_init.sql (partidas + respuestas), 002_primer_intento.sql (regla del ranking)
 scripts/          migrate.mjs (npm run db:migrate)
 e2e/              Test de Playwright: una ronda completa en celular
 ```
@@ -43,7 +43,7 @@ Toda la estadística vive en `src/lib` (por ejemplo `stats.ts`); los componentes
 | --- | --- | --- |
 | `DATABASE_URL` | Sí | Conexión a Postgres. Si contiene `neon.tech` se usa el driver de Neon; si no, `pg`. |
 | `NEXT_PUBLIC_SITE_URL` | Recomendada | URL pública del juego; es la que codifica el QR del panel. Si falta, se usa la URL desde la que se abrió el panel. |
-| `PANEL_KEY` | Opcional | Si se define, `/api/export` (CSV) exige `?key=<PANEL_KEY>`. |
+| `PANEL_KEY` | Opcional | Si se define, `/api/export` (Excel y CSV) exige `?key=<PANEL_KEY>`. |
 
 ## Correr en local
 
@@ -61,7 +61,7 @@ DATABASE_URL=postgresql://alerta:alerta@localhost:5432/alerta
 
 ```bash
 npm install
-npm run db:migrate                # crea las tablas
+npm run db:migrate                # crea las tablas y aplica 001 y 002
 npm run dev                       # http://localhost:3000
 ```
 
@@ -102,7 +102,8 @@ El límite de peticiones por IP vive en memoria: en Vercel es **por instancia se
 - El QR apunta a `NEXT_PUBLIC_SITE_URL`. En la feria usa la URL pública, o la IP de tu red local (`http://192.168.x.x:3000`) si todos están en el mismo Wi-Fi.
 - Por HTTP en LAN el juego funciona (hay respaldo para generar el id de partida sin `crypto.randomUUID`), pero el audio y el WebGL se comportan mejor con HTTPS.
 - Proyecta `/panel` a 1920x1080. El filtro Normal / Experto cambia las estadísticas y el histograma.
-- El CSV sale de **Exportar CSV** o de `/api/export?key=TU_CLAVE` (una fila por respuesta, UTF-8 con BOM).
+- **Ranking**: solo cuenta el **primer intento por apodo** (sin distinguir mayúsculas ni espacios) en cada dificultad; el desempate es el **menor tiempo total** y luego la partida más antigua. Los intentos siguientes se guardan, pero no entran al ranking ni a las estadísticas del público (histograma, promedio, VPP observado, % que sobreestimó). El contador en vivo sí cuenta todas las partidas.
+- **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
 - Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".
 
 ## Tests

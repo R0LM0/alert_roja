@@ -10,6 +10,61 @@ export const dynamic = "force-dynamic";
 const MAX_BYTES = 8 * 1024;
 const limitador = crearLimitador({ max: 10, ventanaMs: 60_000 });
 
+/** 23505 = unique_violation (pg y driver HTTP de Neon exponen `code`). */
+function esViolacionUnica(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: unknown }).code === "23505";
+}
+
+type Respuestas = ReturnType<typeof partidaSchema.parse>["respuestas"];
+
+/**
+ * Una sola sentencia (CTE) = atómica en pg y en Neon HTTP; todo parametrizado.
+ * `on conflict do nothing`: un id repetido nunca modifica la fila existente y, como
+ * `p` queda vacío, tampoco se insertan respuestas duplicadas. Si ya existía, se
+ * devuelve el id y el puntaje guardados (el segundo select).
+ * `primer_intento` lo decide el servidor dentro de la misma sentencia: es el primero si
+ * no hay otra partida del mismo apodo (sin mayúsculas/espacios) y dificultad.
+ */
+function guardar(
+  id: string,
+  jugador: string,
+  prevalencia: number,
+  puntaje: number,
+  tiempoTotalMs: number,
+  ordenadas: Respuestas,
+  forzarRepetido: boolean,
+) {
+  return sql()`
+    with p as (
+      insert into partidas (id, jugador, prevalencia, puntaje, tiempo_total_ms, primer_intento)
+      select ${id}::uuid, ${jugador}, ${prevalencia}, ${puntaje}, ${tiempoTotalMs}::int,
+        not ${forzarRepetido}::boolean and not exists (
+          select 1 from partidas x
+          where lower(btrim(x.jugador)) = lower(btrim(${jugador}::text)) and x.prevalencia = ${prevalencia}::numeric
+        )
+      on conflict (id) do nothing
+      returning id, puntaje
+    ),
+    r as (
+      insert into respuestas (partida_id, orden, estimacion_pct, decision, estaba_infectado, tiempo_ms)
+      select p.id, t.orden, t.est, t.dec, t.inf, t.ms
+      from p,
+        unnest(
+          ${ordenadas.map((r) => r.orden)}::smallint[],
+          ${ordenadas.map((r) => r.estimacion_pct)}::smallint[],
+          ${ordenadas.map((r) => r.decision)}::text[],
+          ${ordenadas.map((r) => r.estaba_infectado)}::boolean[],
+          ${ordenadas.map((r) => r.tiempo_ms)}::int[]
+        ) as t(orden, est, dec, inf, ms)
+      returning 1
+    )
+    select p.id::text as id, p.puntaje, true as nueva from p
+    union all
+    select x.id::text, x.puntaje, false from partidas x
+    where x.id = ${id}::uuid and not exists (select 1 from p)
+  `;
+}
+
 export async function POST(req: Request) {
   const ip = clientIp(req.headers);
   const limite = limitador.revisar(ip);
@@ -50,36 +105,18 @@ export async function POST(req: Request) {
   // El puntaje del cliente se ignora: se recalcula aquí.
   const puntaje = puntajePartida(ordenadas, prevalencia);
 
+  const tiempoTotalMs = ordenadas.reduce((a, r) => a + r.tiempo_ms, 0);
+
   try {
-    // Una sola sentencia (CTE) = atómica en pg y en Neon HTTP; todo parametrizado.
-    // `on conflict do nothing`: un id repetido nunca modifica la fila existente y, como
-    // `p` queda vacío, tampoco se insertan respuestas duplicadas. Si ya existía, se
-    // devuelve el id y el puntaje guardados (el segundo select).
-    const filas = await sql()`
-      with p as (
-        insert into partidas (id, jugador, prevalencia, puntaje)
-        values (${id}::uuid, ${jugador}, ${prevalencia}, ${puntaje})
-        on conflict (id) do nothing
-        returning id, puntaje
-      ),
-      r as (
-        insert into respuestas (partida_id, orden, estimacion_pct, decision, estaba_infectado, tiempo_ms)
-        select p.id, t.orden, t.est, t.dec, t.inf, t.ms
-        from p,
-          unnest(
-            ${ordenadas.map((r) => r.orden)}::smallint[],
-            ${ordenadas.map((r) => r.estimacion_pct)}::smallint[],
-            ${ordenadas.map((r) => r.decision)}::text[],
-            ${ordenadas.map((r) => r.estaba_infectado)}::boolean[],
-            ${ordenadas.map((r) => r.tiempo_ms)}::int[]
-          ) as t(orden, est, dec, inf, ms)
-        returning 1
-      )
-      select p.id::text as id, p.puntaje, true as nueva from p
-      union all
-      select x.id::text, x.puntaje, false from partidas x
-      where x.id = ${id}::uuid and not exists (select 1 from p)
-    `;
+    let filas: Awaited<ReturnType<typeof guardar>>;
+    try {
+      filas = await guardar(id, jugador, prevalencia, puntaje, tiempoTotalMs, ordenadas, false);
+    } catch (e) {
+      // Dos primeros intentos del mismo apodo chocaron en el índice único parcial
+      // (partidas_primer_intento_uk): el perdedor se guarda como intento repetido.
+      if (!esViolacionUnica(e)) throw e;
+      filas = await guardar(id, jugador, prevalencia, puntaje, tiempoTotalMs, ordenadas, true);
+    }
     let fila = filas[0];
     if (!fila) {
       // Carrera con una petición idéntica en vuelo: su commit aún no era visible

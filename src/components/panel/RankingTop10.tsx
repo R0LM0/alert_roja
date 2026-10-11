@@ -1,6 +1,7 @@
 import { Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { EntradaRanking } from "@/lib/panel";
+import { formatearTiempoTotal } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
 
 type Props = { ranking: EntradaRanking[] | undefined };
@@ -20,7 +21,7 @@ function Posicion({ n }: { n: number }) {
   );
 }
 
-/** Top 10 por puntaje, en el orden en que lo entrega la API (empates por antigüedad). */
+/** Top 10 (primer intento por apodo): puntaje, y a igual puntaje gana el menor tiempo total. Orden de la API. */
 export function RankingTop10({ ranking }: Props) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col gap-3 p-6">
@@ -43,6 +44,14 @@ export function RankingTop10({ ranking }: Props) {
               <span className="min-w-0 flex-1 truncate text-3xl font-semibold" title={e.jugador}>
                 {e.jugador}
               </span>
+              {e.tiempoTotalMs !== undefined && e.tiempoTotalMs !== null ? (
+                <span
+                  className="font-display text-3xl font-semibold tabular-nums text-muted"
+                  aria-label={`Tiempo total ${formatearTiempoTotal(e.tiempoTotalMs)}`}
+                >
+                  {formatearTiempoTotal(e.tiempoTotalMs)}
+                </span>
+              ) : null}
               <span className="font-display text-4xl font-bold tabular-nums">
                 {e.puntaje}
                 <span className="sr-only"> puntos</span>

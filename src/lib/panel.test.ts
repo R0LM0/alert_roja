@@ -111,6 +111,10 @@ describe("urlExport", () => {
   it("codifica la clave", () => {
     expect(urlExport("a b&c")).toBe("/api/export?key=a%20b%26c");
   });
+  it("el CSV usa formato=csv", () => {
+    expect(urlExport(undefined, "csv")).toBe("/api/export?formato=csv");
+    expect(urlExport("k", "csv")).toBe("/api/export?formato=csv&key=k");
+  });
 });
 
 describe("esquemas de respuesta", () => {
@@ -129,11 +133,15 @@ describe("esquemas de respuesta", () => {
       histograma: cubetas,
     };
     expect(esquemaStats.safeParse(base).success).toBe(true);
+    expect(esquemaStats.safeParse({ ...base, totalJugadores: 0 }).success).toBe(true);
     expect(esquemaStats.safeParse({ ...base, n: "x" }).success).toBe(false);
   });
   it("valida /api/ranking", () => {
     const ok = { ranking: [{ jugador: "Ana", puntaje: 300, prevalencia: 0.1, creada_en: "2026-01-01T00:00:00.000Z" }] };
     expect(esquemaRanking.safeParse(ok).success).toBe(true);
+    const conTiempo = { ranking: [{ ...ok.ranking[0], tiempoTotalMs: 83000 }] };
+    expect(esquemaRanking.safeParse(conTiempo).success).toBe(true);
+    expect(esquemaRanking.safeParse({ ranking: [{ ...ok.ranking[0], tiempoTotalMs: null }] }).success).toBe(true);
     expect(esquemaRanking.safeParse({ ranking: [{ jugador: 1 }] }).success).toBe(false);
   });
 });

@@ -10,10 +10,10 @@ export async function GET(req: Request) {
 
   try {
     const filas = await sql()`
-      select jugador, puntaje, prevalencia, creada_en
+      select jugador, puntaje, prevalencia, creada_en, tiempo_total_ms
       from partidas
-      where (${prev}::numeric is null or prevalencia = ${prev}::numeric)
-      order by puntaje desc, creada_en asc
+      where primer_intento and (${prev}::numeric is null or prevalencia = ${prev}::numeric)
+      order by puntaje desc, tiempo_total_ms asc nulls last, creada_en asc
       limit 10
     `;
     return NextResponse.json({
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
         jugador: f.jugador,
         puntaje: Number(f.puntaje),
         prevalencia: Number(f.prevalencia),
+        tiempoTotalMs: f.tiempo_total_ms === null ? null : Number(f.tiempo_total_ms),
         creada_en: new Date(f.creada_en as string).toISOString(),
       })),
     });

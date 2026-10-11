@@ -12,6 +12,8 @@ const esquemaCubeta = z.object({
 export const esquemaStats = z.object({
   prevalencia: z.number().nullable(),
   totalPartidas: z.number(),
+  /** Jugadores distintos (primeros intentos); opcional por compatibilidad. */
+  totalJugadores: z.number().optional(),
   n: z.number(),
   estimacionPromedioPct: z.number().nullable(),
   vppObservadoPct: z.number().nullable(),
@@ -31,6 +33,7 @@ export const esquemaRanking = z.object({
       puntaje: z.number(),
       prevalencia: z.number(),
       creada_en: z.string(),
+      tiempoTotalMs: z.number().nullable().optional(),
     }),
   ),
 });
@@ -107,7 +110,8 @@ export function urlLegible(url: string): string {
   return url.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
 }
 
-/** Enlace de descarga del CSV; `key` solo se agrega si el panel la recibió en su URL. */
-export function urlExport(key?: string): string {
-  return key ? `/api/export?key=${encodeURIComponent(key)}` : "/api/export";
+/** Enlace de descarga del Excel (`?formato=csv` para el CSV); `key` solo se agrega si el panel la recibió en su URL. */
+export function urlExport(key?: string, formato: "xlsx" | "csv" = "xlsx"): string {
+  const params = [formato === "csv" ? "formato=csv" : "", key ? `key=${encodeURIComponent(key)}` : ""].filter(Boolean);
+  return params.length ? `/api/export?${params.join("&")}` : "/api/export";
 }
