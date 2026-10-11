@@ -4,6 +4,8 @@ export const SENSIBILIDAD = 0.9;
 export const ESPECIFICIDAD = 0.8;
 export const N_CIUDAD = 1000;
 export const PACIENTES_POR_RONDA = 10;
+/** Modo experto: prevalencia 1 %. */
+export const PREVALENCIA_EXPERTO = 0.01;
 
 export type Frecuencias = { vp: number; fp: number; fn: number; vn: number };
 
@@ -85,6 +87,43 @@ export function resumir(rs: Respuesta[], prev = PREVALENCIA): Resumen {
 }
 
 /** Sortea un paciente que dio positivo: infectado con probabilidad = VPP. */
-export function sortearPositivo(rand: () => number = Math.random): { infectado: boolean } {
-  return { infectado: rand() < vppBayes() };
+export function sortearPositivo(
+  rand: () => number = Math.random,
+  prev = PREVALENCIA,
+): { infectado: boolean } {
+  return { infectado: rand() < vppBayes(prev) };
+}
+
+/** Puntos por una estimación: 100 menos el error absoluto (en puntos porcentuales), mínimo 0. */
+export function puntajeRespuesta(estimacionPct: number, vppPct: number): number {
+  return Math.max(0, Math.round(100 - Math.abs(estimacionPct - vppPct)));
+}
+
+/** La decisión acierta si aísla a un infectado o libera a un sano. */
+function decisionAcertada(r: Respuesta): boolean {
+  return (r.decision === "aislar") === r.estaba_infectado;
+}
+
+const BONO_DECISION = 20;
+
+/** Puntaje de una partida: estimaciones + 20 por cada decisión acorde a la realidad. */
+export function puntajePartida(rs: Respuesta[], prev = PREVALENCIA): number {
+  const vppPct = vppBayes(prev) * 100;
+  return rs.reduce(
+    (a, r) => a + puntajeRespuesta(r.estimacion_pct, vppPct) + (decisionAcertada(r) ? BONO_DECISION : 0),
+    0,
+  );
+}
+
+export type Insignia = "bayesiano-nato" | "paranoico" | "confiado";
+
+/** Insignias ganadas en una partida completa (10 pacientes). */
+export function insignias(rs: Respuesta[], _prev = PREVALENCIA): Insignia[] {
+  if (rs.length === 0) return [];
+  const out: Insignia[] = [];
+  const promedio = rs.reduce((a, r) => a + r.estimacion_pct, 0) / rs.length;
+  if (promedio >= 25 && promedio <= 40) out.push("bayesiano-nato");
+  if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "aislar")) out.push("paranoico");
+  if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "liberar")) out.push("confiado");
+  return out;
 }

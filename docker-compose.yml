@@ -1,3 +1,4 @@
+# Desarrollo: `docker compose up -d db` y luego `npm run db:migrate` (con DATABASE_URL de .env.example).
 services:
   db:
     image: postgres:16-alpine
@@ -5,8 +6,10 @@ services:
       POSTGRES_USER: alerta
       POSTGRES_PASSWORD: alerta
       POSTGRES_DB: alerta
+    ports:
+      - "5432:5432"
     volumes:
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/migrations:/migrations:ro
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U alerta -d alerta"]

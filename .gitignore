@@ -5,3 +5,7 @@ node_modules
 .vercel
 next-env.d.ts
 *.tsbuildinfo
+*.tar.gz
+test-results/
+playwright-report/
+.atl/
