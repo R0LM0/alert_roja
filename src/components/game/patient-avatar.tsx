@@ -15,8 +15,13 @@ type PatientAvatarProps = {
 /** Fondos suaves para que cada paciente tenga su propio color. */
 const FONDOS = ["ffd6cc", "ffe8b3", "d4f1d9", "d3e4ff", "e9d8ff", "ffd9ec"];
 
-/** Expresiones que sugieren malestar o preocupación: son pacientes con un positivo. */
-const CARAS = ["concerned", "concernedFear", "fear", "hectic", "eyesClosed", "serious", "calm", "awe"] as const;
+/**
+ * Solo expresiones neutras y sin mascarilla ni accesorios médicos: la cara no debe dar
+ * ninguna pista sobre si el paciente está infectado (sería una señal falsa que sesga la
+ * estimación; el sorteo de infección es independiente del avatar).
+ */
+const CARAS = ["calm", "blank", "serious"] as const;
+const ACCESORIOS = ["glasses", "glasses2", "glasses3", "glasses4", "glasses5", "sunglasses"] as const;
 
 /**
  * Avatar generado localmente (DiceBear "Open Peeps", diseño CC0 de Pablo Stanley);
@@ -30,7 +35,8 @@ export function PatientAvatar({ seed, name, className }: PatientAvatarProps) {
         seed,
         face: [...CARAS],
         backgroundColor: FONDOS,
-        maskProbability: 20,
+        accessories: [...ACCESORIOS],
+        maskProbability: 0,
         accessoriesProbability: 25,
         radius: 50,
       }).toDataUri(),
