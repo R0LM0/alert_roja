@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Inter } from "next/font/google";
+import { ReintentoOffline } from "@/components/game/ReintentoOffline";
 import "./globals.css";
 
 const fontDisplay = Fredoka({ subsets: ["latin"], variable: "--font-display", display: "swap" });
@@ -20,7 +21,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${fontDisplay.variable} ${fontBody.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ReintentoOffline />
+      </body>
     </html>
   );
 }
