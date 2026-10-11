@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import useSound from "use-sound";
 
 export type NombreSonido = "click" | "alerta" | "acierto" | "error";
@@ -14,12 +14,15 @@ const RUTAS: Record<NombreSonido, string> = {
 
 const CLAVE_STORAGE = "alerta-roja:silenciado";
 
-function leerSilenciadoInicial(): boolean {
-  // Silenciado por defecto: el navegador exige un gesto del usuario
-  // antes de reproducir audio; el toggle es ese gesto.
+type LectorStorage = Pick<Storage, "getItem">;
+
+/**
+ * Preferencia guardada de silencio. Silenciado por defecto: el navegador exige
+ * un gesto del usuario antes de reproducir audio; el toggle es ese gesto.
+ */
+export function leerSilencioGuardado(storage?: LectorStorage): boolean {
   try {
-    if (typeof window === "undefined" || !window.localStorage) return true;
-    const guardado = window.localStorage.getItem(CLAVE_STORAGE);
+    const guardado = (storage ?? window.localStorage).getItem(CLAVE_STORAGE);
     return guardado === null ? true : guardado === "1";
   } catch {
     return true;
@@ -40,7 +43,12 @@ const contexto = createContext<SonidoContexto>({
 
 /** Provee `useSonido()` a la app (montar una vez, cerca de la raíz). */
 export function SonidoProvider({ children }: { children: ReactNode }) {
-  const [silenciado, setSilenciado] = useState<boolean>(leerSilenciadoInicial);
+  // Mismo valor que el servidor en el primer render (evita el mismatch de
+  // hidratación); la preferencia guardada se aplica tras montar.
+  const [silenciado, setSilenciado] = useState(true);
+  useEffect(() => {
+    setSilenciado(leerSilencioGuardado());
+  }, []);
   const activado = !silenciado;
 
   const [tocarClick] = useSound(RUTAS.click, { soundEnabled: activado, volume: 0.5 });

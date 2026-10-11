@@ -129,3 +129,14 @@ test("modo experto: el mensaje clave cambia a 1 de cada 23", async ({ page }) =>
   for (const n of ["9", "198", "1", "792"]) await expect(tabla.getByText(n, { exact: true })).toBeVisible();
   expect(errores).toEqual([]);
 });
+
+test("sonido ya activado en visitas previas: sin errores de hidratación", async ({ page }) => {
+  const errores = vigilarErrores(page);
+  await page.addInitScript(() => window.localStorage.setItem("alerta-roja:silenciado", "0"));
+
+  await page.goto("/");
+  const boton = page.locator("button[data-sin-sonido]");
+  // Tras montar aplica la preferencia guardada (sonido activado).
+  await expect(boton).toHaveAttribute("aria-pressed", "true");
+  expect(errores).toEqual([]);
+});
