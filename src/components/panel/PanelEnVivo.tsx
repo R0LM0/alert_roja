@@ -43,7 +43,7 @@ export function PanelEnVivo({ clave }: Props) {
         <div
           aria-busy={cargando || desactualizado}
           className={cn(
-            "grid min-h-0 flex-1 grid-cols-1 gap-3 transition sm:gap-4-opacity lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] 2xl:grid-cols-[26rem_minmax(0,1fr)_32rem] 2xl:grid-rows-[minmax(0,1fr)] 2xl:gap-6",
+            "grid min-h-0 flex-1 grid-cols-1 gap-3 transition-opacity sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] 2xl:grid-cols-[26rem_minmax(0,1fr)_32rem] 2xl:grid-rows-[minmax(0,1fr)] 2xl:gap-6",
             desactualizado && "opacity-60",
           )}
         >
