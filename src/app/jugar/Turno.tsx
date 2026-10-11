@@ -13,6 +13,7 @@ import { enviarPartida } from "@/lib/cola-offline";
 import {
   armarPartida,
   crearRonda,
+  nuevoIdPartida,
   prevalenciaDeModo,
   type Decision,
   type Modo,
@@ -50,6 +51,7 @@ export function Turno({ modo }: { modo: Modo }) {
   const estimacionRef = useRef(ESTIMACION_INICIAL);
   const inicioPaciente = useRef(0);
   const ocupado = useRef(false); // evita doble decisión (botón + timeout + swipe)
+  const idPartida = useRef("");
   const iniciada = useRef(false);
   const enviada = useRef(false);
   const pausa = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -65,6 +67,7 @@ export function Turno({ modo }: { modo: Modo }) {
       return;
     }
     setApodo(nombre);
+    idPartida.current = nuevoIdPartida(); // clave de idempotencia de esta ronda
     setRonda(crearRonda(nuevaSemilla(), prevalencia));
     setFase("jugando");
   }, [router, prevalencia]);
@@ -140,7 +143,7 @@ export function Turno({ modo }: { modo: Modo }) {
     if (enviada.current) return;
     enviada.current = true;
     setFase("enviando");
-    const payload = armarPartida(apodo, prevalencia, respuestas.current);
+    const payload = armarPartida(apodo, prevalencia, respuestas.current, idPartida.current);
     const r = await enviarPartida(payload);
     if (r.estado === "rechazado") {
       setMensajeError(r.mensaje);
@@ -193,12 +196,12 @@ export function Turno({ modo }: { modo: Modo }) {
 
   const paciente = ronda[indice];
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
+    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
 
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 pr-12">
         <ProgresoPacientes actual={indice + 1} total={ronda.length} className="grow" />
         {conTiempo ? <CuentaRegresiva segundos={SEGUNDOS_POR_PACIENTE} restantes={restantes} /> : null}
       </div>

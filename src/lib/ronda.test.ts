@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { partidaSchema } from "./schema";
-import { armarPartida, crearRonda, prevalenciaDeModo, type RespuestaUI } from "./ronda";
+import { armarPartida, crearRonda, nuevoIdPartida, prevalenciaDeModo, type RespuestaUI } from "./ronda";
 import { vppBayes } from "./stats";
 
 /** PRNG determinista (mulberry32) para las pruebas. */
@@ -48,6 +48,24 @@ describe("crearRonda", () => {
   });
 });
 
+describe("nuevoIdPartida", () => {
+  it("genera uuid v4 válidos y distintos", () => {
+    const a = nuevoIdPartida();
+    expect(partidaSchema.shape.id.safeParse(a).success).toBe(true);
+    expect(nuevoIdPartida()).not.toBe(a);
+  });
+
+  it("sigue siendo uuid sin crypto.randomUUID (http en la red local no es contexto seguro)", () => {
+    const original = globalThis.crypto.randomUUID;
+    Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined, configurable: true });
+    try {
+      expect(partidaSchema.shape.id.safeParse(nuevoIdPartida()).success).toBe(true);
+    } finally {
+      Object.defineProperty(globalThis.crypto, "randomUUID", { value: original, configurable: true });
+    }
+  });
+});
+
 describe("armarPartida", () => {
   const ronda = crearRonda("s2", 0.1, prng(3));
   const respuestas: RespuestaUI[] = ronda.map((p, i) => ({
@@ -68,6 +86,14 @@ describe("armarPartida", () => {
       estaba_infectado: ronda[2].estaba_infectado,
       tiempo_ms: 1002,
     });
+  });
+
+  it("incluye el id de idempotencia cuando se entrega y lo omite si no", () => {
+    const id = "3f2b8c1e-9d4a-4b7e-8a61-0c5d2e7f9a10";
+    const con = armarPartida("Ana", 0.1, respuestas, id);
+    expect(con.id).toBe(id);
+    expect(partidaSchema.safeParse(con).success).toBe(true);
+    expect("id" in armarPartida("Ana", 0.1, respuestas)).toBe(false);
   });
 
   it("redondea y acota estimación y tiempo", () => {

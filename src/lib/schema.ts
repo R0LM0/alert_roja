@@ -20,6 +20,8 @@ export const jugadorSchema = z
   .refine((s) => !tieneGroseria(s), "Elegí otro apodo");
 
 export const partidaSchema = z.object({
+  /** Clave de idempotencia generada por el cliente; si falta, la genera el servidor. */
+  id: z.string().uuid().optional(),
   jugador: jugadorSchema,
   prevalencia: prevalenciaSchema,
   respuestas: z

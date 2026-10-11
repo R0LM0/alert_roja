@@ -56,8 +56,14 @@ const FILAS_TABLA: { titulo: string; grupos: [GrupoClave, GrupoClave] }[] = [
   { titulo: "Negativo", grupos: ["FN", "VN"] },
 ];
 
-/** Alternativa 2D accesible: puntos que se reagrupan + tabla 2x2 con los conteos. */
-export function TablaFrecuencias({ frecuencias }: { frecuencias: Frecuencias }) {
+type TablaProps = {
+  frecuencias: Frecuencias;
+  /** Solo la tabla con los conteos: sin puntos ni leyenda (los aporta la escena de la ciudad). */
+  soloTabla?: boolean;
+};
+
+/** Alternativa accesible: puntos que se reagrupan + tabla 2x2 con los conteos y la leyenda. */
+export function TablaFrecuencias({ frecuencias, soloTabla = false }: TablaProps) {
   const cantidad: Record<GrupoClave, number> = {
     VP: frecuencias.vp,
     FP: frecuencias.fp,
@@ -66,7 +72,7 @@ export function TablaFrecuencias({ frecuencias }: { frecuencias: Frecuencias }) 
   };
   return (
     <div className="flex flex-col gap-4">
-      <Puntos frecuencias={frecuencias} />
+      {soloTabla ? null : <Puntos frecuencias={frecuencias} />}
       <table className="w-full table-fixed border-separate border-spacing-1 text-center">
         <caption className="sr-only">
           Tabla 2x2 de una ciudad de 1000 personas según estar infectado y el resultado de la prueba
@@ -92,11 +98,13 @@ export function TablaFrecuencias({ frecuencias }: { frecuencias: Frecuencias }) 
           ))}
         </tbody>
       </table>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {(["VP", "FP", "FN", "VN"] as const).map((g) => (
-          <Leyenda key={g} grupo={g} cantidad={cantidad[g]} />
-        ))}
-      </div>
+      {soloTabla ? null : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["VP", "FP", "FN", "VN"] as const).map((g) => (
+            <Leyenda key={g} grupo={g} cantidad={cantidad[g]} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

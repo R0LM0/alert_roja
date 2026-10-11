@@ -23,6 +23,34 @@ function partida(jugador = "Ana") {
 const respuesta = (status: number, cuerpo: unknown = {}) =>
   Promise.resolve(new Response(JSON.stringify(cuerpo), { status, headers: { "content-type": "application/json" } }));
 
+describe("idempotencia", () => {
+  const id = "3f2b8c1e-9d4a-4b7e-8a61-0c5d2e7f9a10";
+  const conId = () => ({ ...partida("Id"), id });
+
+  it("la cola conserva el id y el reintento envía exactamente el mismo cuerpo", async () => {
+    const cola = crearCola(almacenFalso());
+    const fallo = () => Promise.reject(new Error("red"));
+    await enviarPartida(conId(), { fetchFn: fallo, cola });
+    expect(cola.pendientes()[0].id).toBe(id);
+
+    const cuerpos: string[] = [];
+    await cola.reintentar(async (p) => {
+      const r = await enviarSinCola(p, (_u, init) => {
+        cuerpos.push(String(init.body));
+        return respuesta(200, { id, puntaje: 40 });
+      });
+      return r.estado !== "pendiente";
+    });
+    expect(JSON.parse(cuerpos[0]).id).toBe(id);
+    expect(cola.pendientes()).toEqual([]);
+  });
+
+  it("un 200 (partida ya existente) cuenta como guardado", async () => {
+    const r = await enviarSinCola(conId(), () => respuesta(200, { id, puntaje: 40 }));
+    expect(r).toEqual({ estado: "guardado", id, puntaje: 40 });
+  });
+});
+
 describe("crearCola", () => {
   it("encola y lista en orden", () => {
     const cola = crearCola(almacenFalso());

@@ -21,9 +21,9 @@ export function PanelEnVivo({ clave }: Props) {
   const { stats, ranking, error, cargando, desactualizado } = usePanelDatos(modo);
 
   return (
-    <FondoPanel>
+    <FondoPanel pulso={stats?.totalPartidas ?? 0}>
       <main className="panel-pantalla mx-auto flex w-full max-w-[120rem] flex-col gap-4 p-4 2xl:gap-6 2xl:p-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-4 pr-12 2xl:pr-16">
           <h1 className="font-display text-4xl font-bold 2xl:text-6xl">
             <span className="text-primary-text">Alerta Roja</span> · Panel en vivo
           </h1>

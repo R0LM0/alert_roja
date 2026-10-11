@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Inter } from "next/font/google";
+import { Proveedores } from "@/components/providers/Proveedores";
 import { ReintentoOffline } from "@/components/game/ReintentoOffline";
 import "./globals.css";
 
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${fontDisplay.variable} ${fontBody.variable}`}>
       <body>
-        {children}
+        <Proveedores>{children}</Proveedores>
         <ReintentoOffline />
       </body>
     </html>

@@ -23,7 +23,7 @@ interface CiudadRevelacionProps {
   fase: FaseCiudad;
 }
 
-function hayWebGL(): boolean {
+export function hayWebGL(): boolean {
   try {
     if (typeof document === "undefined") return false;
     const canvas = document.createElement("canvas");
@@ -33,7 +33,7 @@ function hayWebGL(): boolean {
   }
 }
 
-function esGamaBaja(): boolean {
+export function esGamaBaja(): boolean {
   try {
     const hilos = typeof navigator !== "undefined" ? (navigator.hardwareConcurrency ?? 8) : 8;
     const ram =
@@ -46,7 +46,7 @@ function esGamaBaja(): boolean {
   }
 }
 
-function prefiereReducido(): boolean {
+export function prefiereReducido(): boolean {
   try {
     return (
       typeof window !== "undefined" &&

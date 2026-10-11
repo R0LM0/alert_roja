@@ -11,6 +11,7 @@ export function BotonSilencio({ className }: { className?: string }) {
   return (
     <button
       type="button"
+      data-sin-sonido
       onClick={alternarSilencio}
       aria-pressed={!silenciado}
       aria-label={silenciado ? "Activar sonidos" : "Silenciar sonidos"}

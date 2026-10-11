@@ -6,7 +6,7 @@ import { TitularInicio } from "@/components/game/TitularInicio";
 // La portada no muestra la prevalencia ni el VPP reales: sesgaría la intuición del jugador.
 export default function Inicio() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-8 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-md flex-col gap-8 px-4 pt-14 pb-8">
       <TitularInicio />
       <StoryCards />
       <CampoApodo />
