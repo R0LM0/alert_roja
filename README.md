@@ -103,7 +103,7 @@ El límite de peticiones por IP vive en memoria: en Vercel es **por instancia se
 - Por HTTP en LAN el juego funciona (hay respaldo para generar el id de partida sin `crypto.randomUUID`), pero el audio y el WebGL se comportan mejor con HTTPS.
 - Proyecta `/panel` a 1920x1080. El filtro Normal / Experto cambia las estadísticas y el histograma.
 - **Ranking**: solo cuenta el **primer intento por apodo** (sin distinguir mayúsculas ni espacios) en cada dificultad; el desempate es el **menor tiempo total** y luego la partida más antigua. Los intentos siguientes se guardan, pero no entran al ranking ni a las estadísticas del público (histograma, promedio, VPP observado, % que sobreestimó). El contador en vivo sí cuenta todas las partidas.
-- **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
+- **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). La hoja Histograma incluye un gráfico de columnas nativo (editable en Excel) por dificultad, con el tramo del VPP teórico resaltado. El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
 - Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".
 
 ## Tests

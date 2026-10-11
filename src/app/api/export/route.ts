@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { errorJson, logError } from "@/lib/api";
 import { aCsv } from "@/lib/csv";
 import { cargarDatosExport, leerRespuestas } from "@/lib/export-datos";
-import { generarXlsx } from "@/lib/export-xlsx";
+import { generarXlsxConGraficos } from "@/lib/export-xlsx";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
     }
 
     const datos = await cargarDatosExport();
-    const xlsx = await generarXlsx(datos);
+    const xlsx = await generarXlsxConGraficos(datos, (e) => logError("GET /api/export (gráficos omitidos)", e));
     return new Response(new Uint8Array(xlsx), {
       headers: {
         "content-type": TIPO_XLSX,

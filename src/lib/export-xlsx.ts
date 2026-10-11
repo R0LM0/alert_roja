@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import type { Cubeta } from "./ranking";
 import { formatearTiempoTotal } from "./ranking";
 import { decisionAcertada } from "./stats";
+import { agregarGraficosSeguro, type ConfigGrafico } from "./export-grafico";
 
 /** Datos planos del Excel: el armado del libro no toca la base ni la red. */
 export type FilaRankingExport = {
@@ -71,10 +72,15 @@ const formatoPrev = (p: number) => `${Math.round(p * 100)} %`;
 const pct = (v: number | null) => (v === null ? null : v / 100);
 const rellenar = (argb: string): ExcelJS.Fill => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
 
-function estiloCabecera(row: ExcelJS.Row) {
-  row.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  row.fill = rellenar(COLOR_OSCURO);
-  row.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+/** `columnas` limita el estilo a las primeras N celdas (si no, a toda la fila). */
+function estiloCabecera(row: ExcelJS.Row, columnas?: number) {
+  const estilo = {
+    font: { bold: true, color: { argb: "FFFFFFFF" } },
+    fill: rellenar(COLOR_OSCURO),
+    alignment: { vertical: "middle", horizontal: "center", wrapText: true },
+  } as const;
+  if (columnas === undefined) Object.assign(row, estilo);
+  else for (let c = 1; c <= columnas; c++) Object.assign(row.getCell(c), estilo);
   row.height = 24;
 }
 
@@ -112,7 +118,7 @@ export function bloquesExplicativos(): BloqueTexto[] {
     {
       titulo: "Cómo leer el gráfico",
       texto:
-        "La hoja Histograma cuenta cuántas estimaciones cayeron en cada tramo de 10 puntos (0–9, 10–19… 90–100). El tramo marcado como VPP teórico es la respuesta correcta: si la mayoría de las barras quedan a su derecha, el público sobreestimó el riesgo.",
+        "La hoja Histograma trae, junto a cada tabla, un gráfico de columnas (editable en Excel) con cuántas estimaciones cayeron en cada tramo de 10 puntos (0–9, 10–19… 90–100). La barra oscura es el tramo que contiene el VPP teórico, es decir, la respuesta correcta: si la mayoría de las barras quedan a su derecha, el público sobreestimó el riesgo.",
     },
   ];
 }
@@ -217,7 +223,7 @@ function hojaRanking(wb: ExcelJS.Workbook, datos: DatosExport) {
 
 /* ----------------------------- Histograma ---------------------------- */
 
-const BLOQUE_HISTOGRAMA = 15;
+const BLOQUE_HISTOGRAMA = 22;
 
 /** Posición fija de la tabla de cada dificultad, para adjuntar un gráfico después. */
 export function ubicacionHistograma(indiceDificultad: number) {
@@ -229,6 +235,7 @@ export function ubicacionHistograma(indiceDificultad: number) {
     primeraFila: titulo + 2,
     ultimaFila: titulo + 11,
     filaVpp: titulo + 12,
+    filaNota: titulo + 14,
     /** Columnas (1 = A): categorías y valores del gráfico. */
     colRango: 1,
     colCantidad: 4,
@@ -271,7 +278,7 @@ function hojaHistograma(wb: ExcelJS.Workbook, datos: DatosExport) {
 
     const cab = ws.getRow(u.filaCabecera);
     cab.values = ["Rango (%)", "Desde", "Hasta", "Estimaciones", "% del total", "Marca"];
-    estiloCabecera(cab);
+    estiloCabecera(cab, 6); // el gráfico queda a la derecha: la cabecera no debe cruzarse con él
 
     bloqueHistograma(d).forEach((f, i) => {
       const row = ws.getRow(u.primeraFila + i);
@@ -290,7 +297,22 @@ function hojaHistograma(wb: ExcelJS.Workbook, datos: DatosExport) {
     vpp.getCell(1).font = { bold: true };
     vpp.getCell(4).value = Math.round(d.vppTeoricoPct * 10) / 10;
     vpp.getCell(4).numFmt = "0.0";
+
+    const nota = u.filaNota;
+    ws.mergeCells(nota, 1, nota, 6);
+    const texto = notaHistograma(d);
+    const c = ws.getCell(nota, 1);
+    c.value = texto;
+    c.alignment = { wrapText: true, vertical: "top" };
+    c.font = { italic: true, color: { argb: "FF52525B" } };
+    ws.getRow(nota).height = altoFilaTexto(texto, 75);
   });
+}
+
+/** Texto junto al gráfico: qué son las barras y qué marca la barra oscura. */
+export function notaHistograma(d: Pick<DificultadExport, "vppTeoricoPct">): string {
+  const vpp = (Math.round(d.vppTeoricoPct * 10) / 10).toString().replace(".", ",");
+  return `Cada barra cuenta cuántas estimaciones del público cayeron en un tramo de 10 puntos. La barra oscura es el tramo que contiene el VPP teórico (${vpp} %), la respuesta correcta. Las barras a su derecha son estimaciones por encima de lo correcto (sobreestimación).`;
 }
 
 /* ----------------------------- Respuestas ---------------------------- */
@@ -364,4 +386,41 @@ export function construirLibro(datos: DatosExport): ExcelJS.Workbook {
 
 export async function generarXlsx(datos: DatosExport): Promise<Buffer> {
   return Buffer.from(await construirLibro(datos).xlsx.writeBuffer());
+}
+
+/* ------------------------------ Gráficos ------------------------------ */
+
+/** Un gráfico de columnas por dificultad, a la derecha de su tabla (columnas H–Q). */
+export function configsGraficos(datos: DatosExport): ConfigGrafico[] {
+  return datos.dificultades.map((d, idx) => {
+    const u = ubicacionHistograma(idx);
+    const filas = bloqueHistograma(d);
+    const marcada = filas.findIndex((f) => f.contieneVpp);
+    return {
+      hoja: u.hoja,
+      titulo: `Estimaciones del público · ${d.nombre} (${formatoPrev(d.prevalencia)})`,
+      tituloEjeX: "Estimación (%)",
+      tituloEjeY: "Cantidad de respuestas",
+      nombreSerie: "Estimaciones",
+      filaSerie: u.filaCabecera,
+      colSerie: u.colCantidad,
+      primeraFila: u.primeraFila,
+      ultimaFila: u.ultimaFila,
+      colCategorias: u.colRango,
+      colValores: u.colCantidad,
+      categorias: filas.map((f) => f.rango),
+      valores: filas.map((f) => f.cantidad),
+      indiceMarcado: marcada >= 0 ? marcada : null,
+      desde: { col: 7, fila: u.filaTitulo - 1 },
+      hasta: { col: 17, fila: u.filaTitulo - 1 + 19 },
+    };
+  });
+}
+
+/** Excel con gráficos nativos; si el post-proceso falla, devuelve el libro sin gráficos. */
+export async function generarXlsxConGraficos(
+  datos: DatosExport,
+  alFallar: (e: unknown) => void = () => {},
+): Promise<Buffer> {
+  return agregarGraficosSeguro(await generarXlsx(datos), configsGraficos(datos), alFallar);
 }
