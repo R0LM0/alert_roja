@@ -100,11 +100,11 @@ export function puntajeRespuesta(estimacionPct: number, vppPct: number): number 
 }
 
 /** La decisión acierta si aísla a un infectado o libera a un sano. */
-function decisionAcertada(r: Respuesta): boolean {
+export function decisionAcertada(r: Respuesta): boolean {
   return (r.decision === "aislar") === r.estaba_infectado;
 }
 
-const BONO_DECISION = 20;
+export const BONO_DECISION = 20;
 
 /** Puntaje de una partida: estimaciones + 20 por cada decisión acorde a la realidad. */
 export function puntajePartida(rs: Respuesta[], prev = PREVALENCIA): number {
