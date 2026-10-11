@@ -23,4 +23,18 @@ Nota: la licencia OFL de ambas familias es la publicada por Google Fonts; no hay
 
 ## Sonidos (Kenney CC0)
 
-TODO (fase 6): registrar aquí los paquetes de [Kenney.nl](https://kenney.nl) usados ("Interface Sounds", "Digital Audio"), con nombre de archivo y licencia verificada en el paquete descargado.
+Efectos de [Kenney.nl](https://kenney.nl), licencia **CC0 1.0**
+(verificada en el `LICENSE.txt`/`License.txt` de cada paquete; no exige atribución).
+
+| Archivo en `public/sounds/` | Origen | Paquete |
+| --- | --- | --- |
+| `click.ogg` | `click_002.wav` → OGG (ffmpeg, libvorbis) | [Interface Sounds 1.0](https://kenney.nl/assets/interface-sounds) (11-02-2020) |
+| `acierto.ogg` | `confirmation_002.wav` → OGG (ffmpeg, libvorbis) | Interface Sounds 1.0 |
+| `error.ogg` | `error_001.wav` → OGG (ffmpeg, libvorbis) | Interface Sounds 1.0 |
+| `alerta.ogg` | `threeTone1.ogg` (original del paquete, sin convertir) | [Digital Audio](https://kenney.nl/assets/digital-audio), de Kenney Vleugels |
+
+Notas:
+- Los WAV de Interface Sounds vienen del espejo [Calinou/kenney-interface-sounds](https://github.com/Calinou/kenney-interface-sounds)
+  (conversión sin pérdidas de los OGG originales de Kenney); el `threeTone1.ogg` de Digital Audio,
+  del espejo [ETdoFresh/kenney.nl](https://github.com/ETdoFresh/kenney.nl) (`kenney_digitalaudio/Audio`).
+- Uso: `src/lib/sound.tsx` (`useSonido()` → `play("click" | "alerta" | "acierto" | "error")`).
