@@ -15,7 +15,8 @@ export function sql(): Sql {
   if (!url) throw new Error("Falta la variable de entorno DATABASE_URL");
 
   if (url.includes("neon.tech")) {
-    return neon(url) as unknown as Sql;
+    // El driver HTTP no soporta channel_binding (Neon lo agrega al copiar la URL).
+    return neon(url.replace(/([?&])channel_binding=[^&]*&?/, "$1").replace(/[?&]$/, "")) as unknown as Sql;
   }
 
   const pool = (globalPool.__pool ??= new Pool({ connectionString: url, max: 5 }));

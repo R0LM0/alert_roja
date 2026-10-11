@@ -19,7 +19,8 @@ const archivos = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
 let query;
 let cerrar = async () => {};
 if (url.includes("neon.tech")) {
-  const db = neon(url);
+  // El driver HTTP no soporta channel_binding (Neon lo agrega al copiar la URL).
+  const db = neon(url.replace(/([?&])channel_binding=[^&]*&?/, "$1").replace(/[?&]$/, ""));
   query = (texto, params = []) => db.query(texto, params);
 } else {
   const pool = new pg.Pool({ connectionString: url, max: 1 });
