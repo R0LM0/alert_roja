@@ -46,13 +46,13 @@ export function BotonExportar({ clave }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-3">
+    <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
+      <div className="flex items-center gap-3 max-sm:justify-between">
         <a
           href={hrefXlsx}
           download={NOMBRE_XLSX}
           onClick={(e) => descargar(e, hrefXlsx, NOMBRE_XLSX)}
-          className={cn(buttonVariants({ variant: "outline", size: "lg" }), "min-h-14 text-xl 2xl:text-2xl")}
+          className={cn(buttonVariants({ variant: "outline", size: "lg" }), "min-h-11 flex-1 text-base sm:min-h-14 sm:flex-none sm:text-xl 2xl:text-2xl")}
         >
           <Download aria-hidden="true" />
           Exportar Excel
@@ -61,7 +61,7 @@ export function BotonExportar({ clave }: Props) {
           href={hrefCsv}
           download={NOMBRE_CSV}
           onClick={(e) => descargar(e, hrefCsv, NOMBRE_CSV)}
-          className="text-lg font-semibold text-muted underline underline-offset-4 hover:text-foreground"
+          className="touch-target inline-flex items-center justify-center px-3 text-lg font-semibold text-muted underline underline-offset-4 hover:text-foreground"
         >
           CSV
         </a>

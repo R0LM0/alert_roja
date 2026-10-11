@@ -22,12 +22,12 @@ export function PanelEnVivo({ clave }: Props) {
 
   return (
     <FondoPanel pulso={stats?.totalPartidas ?? 0}>
-      <main className="panel-pantalla mx-auto flex w-full max-w-[120rem] flex-col gap-4 p-4 2xl:gap-6 2xl:p-8">
-        <header className="flex flex-wrap items-center justify-between gap-4 pr-12 2xl:pr-16">
-          <h1 className="font-display text-4xl font-bold 2xl:text-6xl">
+      <main className="panel-pantalla mx-auto flex w-full max-w-[120rem] flex-col gap-3 p-3 sm:gap-4 sm:p-4 2xl:gap-6 2xl:p-8">
+        <header className="flex flex-wrap items-center justify-between gap-3 pr-12 sm:gap-4 2xl:pr-16">
+          <h1 className="font-display text-2xl leading-tight font-bold sm:text-4xl 2xl:text-6xl">
             <span className="text-primary-text">Alerta Roja</span> · Panel en vivo
           </h1>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4">
             <FiltroPrevalencia modo={modo} onCambiar={setModo} />
             <BotonExportar clave={clave} />
           </div>
@@ -43,16 +43,16 @@ export function PanelEnVivo({ clave }: Props) {
         <div
           aria-busy={cargando || desactualizado}
           className={cn(
-            "grid min-h-0 flex-1 grid-cols-1 gap-4 transition-opacity lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] 2xl:grid-cols-[26rem_minmax(0,1fr)_32rem] 2xl:grid-rows-[minmax(0,1fr)] 2xl:gap-6",
+            "grid min-h-0 flex-1 grid-cols-1 gap-3 transition sm:gap-4-opacity lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] 2xl:grid-cols-[26rem_minmax(0,1fr)_32rem] 2xl:grid-rows-[minmax(0,1fr)] 2xl:gap-6",
             desactualizado && "opacity-60",
           )}
         >
-          <div className="flex min-h-0 flex-col gap-4 2xl:gap-6">
+          <div className="flex min-h-0 flex-col gap-3 sm:gap-4 2xl:gap-6">
             <QrJuego />
             <ContadorPartidas total={stats?.totalPartidas} />
           </div>
 
-          <div className="flex min-h-0 flex-col gap-4 2xl:gap-6">
+          <div className="flex min-h-0 flex-col gap-3 sm:gap-4 2xl:gap-6">
             <TarjetasEstadisticas stats={stats} />
             <HistogramaEstimaciones
               histograma={stats?.histograma}
