@@ -19,6 +19,8 @@ Evolve the existing MVP (Next.js + stats.ts + db.ts + Docker) into the full "Ale
 - [x] T5 Phase 5: /panel (QR, ranking, histogram, cards, filter, CSV)
 - [x] T6 Phase 6: sound, confetti, polish, CREDITS.md
 - [x] T7 Phase 7: vitest extension, Playwright mobile test, README
+- [ ] T8 Polish A: KaTeX Bayes formula, shimmer on card icons, moving background particles
+- [ ] T9 Ranking + Excel: first attempt per nickname, tiebreak by total ms (migration 002), professional .xlsx export
 
 ## Acceptance
 `npm run build` and `npm test` pass; Playwright mobile round passes.
