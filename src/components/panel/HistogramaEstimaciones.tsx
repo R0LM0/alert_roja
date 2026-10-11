@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useReducedMotion } from "motion/react";
 import { Bar, BarChart, LabelList, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Card } from "@/components/ui/card";
-import { datosHistograma, formatoPct, posicionLineaVpp, type CubetaApi } from "@/lib/panel";
+import { anclajeEtiquetaVpp, datosHistograma, formatoPct, posicionLineaVpp, type CubetaApi } from "@/lib/panel";
 
 type Props = {
   histograma: CubetaApi[] | undefined;
@@ -54,7 +54,14 @@ export function HistogramaEstimaciones({ histograma, vppTeoricoPct, totalRespues
                   strokeWidth={4}
                   strokeDasharray="10 6"
                   ifOverflow="visible"
-                  label={{ value: etiquetaLinea, position: "top", fill: COLOR_VPP, fontSize: 24, fontWeight: 700 }}
+                  label={{
+                    value: etiquetaLinea,
+                    position: "top",
+                    fill: COLOR_VPP,
+                    fontSize: 24,
+                    fontWeight: 700,
+                    textAnchor: anclajeEtiquetaVpp(linea),
+                  }}
                 />
               ) : null}
             </BarChart>

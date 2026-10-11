@@ -6,6 +6,7 @@ import {
   formatoEntero,
   formatoNumero,
   formatoPct,
+  anclajeEtiquetaVpp,
   posicionLineaVpp,
   urlExport,
   urlJuego,
@@ -54,6 +55,14 @@ describe("posicionLineaVpp", () => {
     expect(posicionLineaVpp(-5).posicion).toBe(0);
     expect(posicionLineaVpp(100)).toMatchObject({ indice: 9, offset: 1, posicion: 10 });
     expect(posicionLineaVpp(250).posicion).toBe(10);
+  });
+});
+
+describe("anclajeEtiquetaVpp", () => {
+  it("la etiqueta crece hacia adentro cerca de los bordes y se centra en el medio", () => {
+    expect(anclajeEtiquetaVpp(posicionLineaVpp(4.35).posicion)).toBe("start");
+    expect(anclajeEtiquetaVpp(posicionLineaVpp(100 / 3).posicion)).toBe("middle");
+    expect(anclajeEtiquetaVpp(posicionLineaVpp(95).posicion)).toBe("end");
   });
 });
 

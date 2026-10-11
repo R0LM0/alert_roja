@@ -71,6 +71,9 @@ describe("puntajeRespuesta", () => {
   it("nunca baja de 0", () => {
     expect(puntajeRespuesta(100, 0)).toBe(0);
   });
+  it("es simétrico: sobrestimar y subestimar por igual cuesta lo mismo", () => {
+    expect(puntajeRespuesta(43, 33)).toBe(puntajeRespuesta(23, 33));
+  });
 });
 
 const mk = (est: number, decision: "aislar" | "liberar", inf: boolean): Respuesta => ({
@@ -103,6 +106,20 @@ describe("insignias", () => {
   });
   it("confiado si libera a los 10", () => {
     expect(insignias(diez(90, "liberar"), PREVALENCIA)).toEqual(["confiado"]);
+  });
+  it("los límites 25 y 40 del promedio son inclusivos; justo afuera no", () => {
+    const mixto = (est: number) => diez(est, "aislar").map((r, i) => ({ ...r, decision: i % 2 ? ("liberar" as const) : r.decision }));
+    expect(insignias(mixto(25), PREVALENCIA)).toEqual(["bayesiano-nato"]);
+    expect(insignias(mixto(40), PREVALENCIA)).toEqual(["bayesiano-nato"]);
+    expect(insignias(mixto(24), PREVALENCIA)).toEqual([]);
+    expect(insignias(mixto(41), PREVALENCIA)).toEqual([]);
+  });
+  it("puede combinar bayesiano-nato con paranoico", () => {
+    expect(insignias(diez(30, "aislar"), PREVALENCIA)).toEqual(["bayesiano-nato", "paranoico"]);
+  });
+  it("paranoico y confiado exigen la ronda completa; sin respuestas no hay insignias", () => {
+    expect(insignias(diez(90, "aislar").slice(0, 9), PREVALENCIA)).toEqual([]);
+    expect(insignias([], PREVALENCIA)).toEqual([]);
   });
   it("ninguna si no cumple nada", () => {
     expect(insignias([...diez(90, "aislar").slice(0, 5), ...diez(90, "liberar").slice(0, 5)], PREVALENCIA)).toEqual([]);

@@ -1,53 +1,128 @@
-# 🚨 Alerta Roja
+# Alerta Roja
 
-Juego estadístico web (Next.js + Neon) sobre el **teorema de Bayes**, sensibilidad, especificidad y valor predictivo positivo. Basado en los juegos 24 y 39 del catálogo de Análisis Estadístico.
+Juego web sobre el **teorema de Bayes**: la prueba acierta el 90 %, pero casi nadie sale bien parado al estimar qué significa un positivo. Proyecto de Análisis Estadístico (UNCSM), pensado para una feria: el público juega en el celular (QR) y un panel en el proyector muestra los resultados en vivo.
 
-**Idea:** la prueba "acierta 90%", pero con 10% de prevalencia y 20% de falsas alarmas, solo **1 de cada 3 positivos** está realmente infectado.
+> **Mensaje clave:** "La prueba acierta 90 %, pero solo 1 de cada 3 positivos está enfermo".
 
-## Cómo se juega
+## Los números
 
-1. El jugador recibe 10 pacientes que dieron positivo.
-2. Para cada uno estima con un slider la probabilidad de que esté infectado y decide **aislar** o **liberar**.
-3. Al final ve la ciudad de 1000 personas repartida en la tabla 2×2 y la fórmula de Bayes.
-4. El panel (`/panel`) compara lo que estima el público contra el VPP real y exporta un CSV.
+| Parámetro | Modo normal | Modo experto |
+| --- | --- | --- |
+| Ciudad | 1000 personas | 1000 personas |
+| Prevalencia | 10 % | 1 % |
+| Sensibilidad | 90 % | 90 % |
+| Especificidad | 80 % | 80 % |
+| Valor predictivo positivo (VPP) | 1/3 (33,3 %) | ≈ 4,3 % (1 de cada 23) |
+| Tabla 2x2 (VP / FP / FN / VN) | 90 / 180 / 10 / 720 | 9 / 198 / 1 / 792 |
+
+Cada ronda son 10 pacientes que dieron positivo. Por cada uno el jugador estima la probabilidad de infección (0–100 %) y decide **Aislar** o **Liberar**. La verdad se revela al final, no paciente por paciente.
+
+Puntaje por paciente: `round(100 − |estimación − VPP|)` más 20 si la decisión coincide con la realidad. El servidor lo recalcula; nunca confía en el cliente.
+
+## Stack y estructura
+
+Next.js 15 (App Router) · TypeScript estricto · Tailwind v4 + Radix · Motion · Recharts · Three.js (ciudad 3D) · SWR · zod · Postgres (`pg` o Neon) · Vitest · Playwright.
+
+```
+src/
+  app/            Rutas: / (inicio), /jugar, /resultado, /panel y /api/* (partidas, stats, ranking, export)
+  components/     UI sin cálculos: game/, resultado/, panel/, three/, ui/
+  lib/            Lógica pura y testeada: stats, ronda, resultado, formula-bayes, panel, csv, cola-offline, rate-limit, db
+db/migrations/    001_init.sql (partidas + respuestas)
+scripts/          migrate.mjs (npm run db:migrate)
+e2e/              Test de Playwright: una ronda completa en celular
+```
+
+Toda la estadística vive en `src/lib` (por ejemplo `stats.ts`); los componentes solo pintan lo que esas funciones devuelven.
+
+## Variables de entorno
+
+`.env.example` documenta las variables. En local se usa `.env.local` (no se sube al repositorio).
+
+| Variable | Obligatoria | Para qué sirve |
+| --- | --- | --- |
+| `DATABASE_URL` | Sí | Conexión a Postgres. Si contiene `neon.tech` se usa el driver de Neon; si no, `pg`. |
+| `NEXT_PUBLIC_SITE_URL` | Recomendada | URL pública del juego; es la que codifica el QR del panel. Si falta, se usa la URL desde la que se abrió el panel. |
+| `PANEL_KEY` | Opcional | Si se define, `/api/export` (CSV) exige `?key=<PANEL_KEY>`. |
 
 ## Correr en local
 
+### Opción A: Postgres con Docker
+
+```bash
+docker compose up -d db           # Postgres 16 en localhost:5432 (usuario, clave y base: alerta)
+```
+
+Crea `.env.local`:
+
+```
+DATABASE_URL=postgresql://alerta:alerta@localhost:5432/alerta
+```
+
 ```bash
 npm install
-cp .env.example .env.local   # poné tu DATABASE_URL de Neon
-# ejecutá db/schema.sql en la consola SQL de Neon
-npm run dev
-npm test
+npm run db:migrate                # crea las tablas
+npm run dev                       # http://localhost:3000
 ```
 
-## Con Docker (valida todo el flujo)
+Usa `docker compose up -d db` (solo la base): el servicio `web` del compose no tiene Dockerfile.
+
+### Opción B: tu propio Postgres (sin Docker)
 
 ```bash
-docker compose up --build   # Postgres 16 + app en http://localhost:3000
+createdb alerta_roja
 ```
 
-El `Dockerfile` corre los tests durante el build. `src/lib/db.ts` usa el driver de Neon si la URL contiene `neon.tech` y `pg` estándar en cualquier otro caso (docker/local).
+```
+# .env.local
+DATABASE_URL=postgresql://USUARIO:CLAVE@localhost:5432/alerta_roja
+```
 
-## Despliegue en Vercel
+Luego `npm install`, `npm run db:migrate` y `npm run dev`.
 
-1. Importá el repo en Vercel.
-2. Integración **Neon** (inyecta `DATABASE_URL`) o agregá la variable a mano.
-3. Ejecutá `db/schema.sql` una vez en Neon.
+## Con Neon
 
-## Estructura
+1. En Neon crea una base **separada** para este proyecto (por ejemplo `alerta_roja`); no reutilices la de otros proyectos.
+2. Copia la cadena de conexión a `DATABASE_URL` en `.env.local`. Si trae `channel_binding=require`, no hace falta quitarlo: la app y el script de migración lo eliminan solos (el driver HTTP de Neon no lo soporta).
+3. Ejecuta `npm run db:migrate` una vez.
 
-- `src/lib/stats.ts` — fórmulas (Bayes, VPP, VPN, frecuencias naturales). Con tests.
-- `src/app/api/respuestas/route.ts` — POST (valida con zod, límite de tamaño y rate limit básico) y GET.
-- `src/app/api/export/route.ts` — CSV.
-- `src/app/page.tsx` — juego. `src/app/panel/page.tsx` — panel con polling (SWR).
+## Desplegar en Vercel
 
-## Cálculo en Excel
+No hace falta Dockerfile.
 
-Con el CSV exportado: `VPP observado = PROMEDIO(estaba_infectado)` y `VPP teórico = (0.9*0.1)/(0.9*0.1+0.2*0.9)`.
+1. Importa el repositorio en Vercel.
+2. Define las 3 variables de entorno: `DATABASE_URL` (Neon), `NEXT_PUBLIC_SITE_URL` (la URL pública del despliegue, la que usa el QR) y `PANEL_KEY`.
+3. Migra la base de Neon **una vez desde tu máquina**: `DATABASE_URL` de Neon en `.env.local` y `npm run db:migrate`.
+4. Abre `/panel?key=TU_CLAVE`.
 
-## Pendiente (siguiente iteración)
+El límite de peticiones por IP vive en memoria: en Vercel es **por instancia serverless**, no global. Alcanza para frenar abusos simples, no es una garantía estricta.
 
-- Slider de prevalencia en el panel (1% → el VPP se desploma).
-- Rate limit persistente (Upstash) si el endpoint queda público mucho tiempo.
-- Ajuste de Poisson a las llegadas al stand.
+## Consejos para la feria
+
+- El QR apunta a `NEXT_PUBLIC_SITE_URL`. En la feria usa la URL pública, o la IP de tu red local (`http://192.168.x.x:3000`) si todos están en el mismo Wi-Fi.
+- Por HTTP en LAN el juego funciona (hay respaldo para generar el id de partida sin `crypto.randomUUID`), pero el audio y el WebGL se comportan mejor con HTTPS.
+- Proyecta `/panel` a 1920x1080. El filtro Normal / Experto cambia las estadísticas y el histograma.
+- El CSV sale de **Exportar CSV** o de `/api/export?key=TU_CLAVE` (una fila por respuesta, UTF-8 con BOM).
+- Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".
+
+## Tests
+
+```bash
+npm test            # Vitest: lógica pura (Bayes, VPP al 10 % y 1 %, puntaje, insignias, panel, cola offline...)
+npm run test:e2e    # Playwright: una ronda completa a 360x740
+```
+
+El test E2E construye y levanta la app de producción en el puerto 3116 e intercepta `POST /api/partidas`, así que **no escribe en la base**. Usa el Chromium ya instalado de Playwright (si falta: `npx playwright install chromium`).
+
+## Guion de 30 segundos
+
+> "Hay un brote en una ciudad de mil personas: 1 de cada 10 está enfermo.
+> Existe una prueba que acierta el 90 %. Te llegan diez pacientes que dieron positivo.
+> Tu trabajo: decir qué tan probable es que cada uno esté enfermo, y decidir si lo aíslas o lo liberas.
+> Al final te mostramos la ciudad completa y la verdad.
+> La sorpresa: de cada 3 positivos, solo 1 está realmente enfermo.
+> Pasa porque la enfermedad es poco común: los falsos positivos de mucha gente sana pesan más que los aciertos. Eso es el teorema de Bayes."
+
+## Créditos y licencias
+
+Tipografías, iconos, avatares y sonidos usan licencias libres, documentadas una por una en [CREDITS.md](CREDITS.md). Los assets se sirven desde `public/`, sin CDN en tiempo de ejecución.

@@ -64,6 +64,22 @@ export function posicionLineaVpp(vppPct: number): { indice: number; offset: numb
   return { indice, offset: posicion - indice, posicion };
 }
 
+/** Alineación del texto respecto a la línea vertical. */
+export type AnclajeEtiqueta = "start" | "middle" | "end";
+
+const BORDE_ETIQUETA = 3;
+
+/**
+ * Hacia dónde crece la etiqueta de la línea para no recortarse en los bordes:
+ * cerca del borde izquierdo el texto sigue a la derecha de la línea ("start"),
+ * cerca del derecho va a su izquierda ("end"), y en el centro se centra.
+ */
+export function anclajeEtiquetaVpp(posicion: number): AnclajeEtiqueta {
+  if (posicion < BORDE_ETIQUETA) return "start";
+  if (posicion > CUBETAS - BORDE_ETIQUETA) return "end";
+  return "middle";
+}
+
 /** Número con coma decimal (es), sin depender de los datos ICU del entorno. */
 export function formatoNumero(n: number, decimales = 1): string {
   return n.toFixed(decimales).replace(".", ",");
