@@ -17,8 +17,8 @@ Nota: la licencia OFL de ambas familias es la publicada por Google Fonts; no hay
 
 ## Avatares
 
-- Estilo **Thumbs** de [DiceBear](https://www.dicebear.com), generado localmente con `@dicebear/core` y `@dicebear/collection` (9.4.x).
-  - Diseño: DiceBear — licencia **CC0 1.0** (verificado en `node_modules/@dicebear/thumbs/LICENSE`). No exige atribución.
+- Estilo **Open Peeps** de [DiceBear](https://www.dicebear.com), generado localmente con `@dicebear/core` y `@dicebear/collection` (9.4.x).
+  - Diseño: [Open Peeps](https://www.openpeeps.com/) de Pablo Stanley — licencia **CC0 1.0** (verificado en `node_modules/@dicebear/open-peeps/LICENSE`). No exige atribución.
   - Código de las librerías DiceBear: MIT.
 
 ## Sonidos (Kenney CC0)
