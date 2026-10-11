@@ -97,6 +97,14 @@ h3 {
   min-height: var(--touch);
 }
 
+/* Panel del proyector: en pantallas grandes ocupa exactamente el alto, sin barras de desplazamiento */
+@media (min-width: 1700px) and (min-height: 980px) {
+  .panel-pantalla {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
