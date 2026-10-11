@@ -112,6 +112,14 @@ test("una ronda completa en el celular: de la portada a la revelación", async (
   }));
   expect(ancho).toBeLessThanOrEqual(visible);
 
+  // Las fórmulas KaTeX caben en su caja (sin scroll interno) en 360 px.
+  const desbordes = await page.evaluate(() =>
+    [...document.querySelectorAll(".katex-display")]
+      .map((f) => f.parentElement!)
+      .filter((caja) => caja.scrollWidth > caja.clientWidth + 1).length,
+  );
+  expect(desbordes).toBe(0);
+
   expect(errores).toEqual([]);
 });
 

@@ -117,8 +117,11 @@ h3 {
 }
 
 /* Fórmulas KaTeX: términos resaltados con los tokens del tema */
-.katex {
-  font-size: 1.1em;
+html .katex {
+  /* `html` sube la especificidad: katex.min.css trae `font: 1.21em` y carga después.
+     La fórmula simbólica (la más ancha) mide ≈19,5 × su font-size y la caja ≈ 100vw − 98px,
+     así que el tamaño sigue al ancho de pantalla y cabe sin scroll desde 320 px. */
+  font-size: clamp(0.65rem, calc((100vw - 104px) / 19.7), 1.1rem);
 }
 .katex .tex-num {
   color: var(--primary-text); /* 6.9:1 sobre surface */
