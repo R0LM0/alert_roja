@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PREVALENCIA, PREVALENCIA_EXPERTO } from "./stats";
-import { formatearNumero, formatearPct, pasosBayes } from "./formula-bayes";
+import { formatearNumero, formatearPct, pasosBayes, texBayes } from "./formula-bayes";
 
 describe("formato", () => {
   it("usa coma decimal", () => {
@@ -38,5 +38,42 @@ describe("pasosBayes", () => {
     expect(p.texto.frecuencias).toBe(
       "De 1000 personas: 9 + 198 dan positivo; solo 9 están enfermas",
     );
+  });
+
+  it("expone las frecuencias naturales como números", () => {
+    expect(pasosBayes(PREVALENCIA).conteos).toEqual({ vp: 90, fp: 180, fn: 10, vn: 720 });
+    expect(pasosBayes(PREVALENCIA_EXPERTO).conteos).toEqual({ vp: 9, fp: 198, fn: 1, vn: 792 });
+  });
+});
+
+describe("texBayes", () => {
+  it("modo normal: fracciones con coma decimal", () => {
+    const t = texBayes(PREVALENCIA, 0.9, 0.8);
+    expect(t.simbolica).toContain("\\dfrac");
+    expect(t.simbolica).toContain("P(E\\mid +)");
+    expect(t.sustitucion).toContain("0{,}9 \\cdot 0{,}1");
+    expect(t.sustitucion).toContain("0{,}2 \\cdot 0{,}9");
+    expect(t.resultado).toBe("\\dfrac{0{,}09}{0{,}27} = 33{,}3\\,\\%");
+  });
+
+  it("modo experto: 0,009 / 0,207 = 4,35 %", () => {
+    const t = texBayes(PREVALENCIA_EXPERTO, 0.9, 0.8);
+    expect(t.sustitucion).toContain("0{,}9 \\cdot 0{,}01");
+    expect(t.sustitucion).toContain("0{,}2 \\cdot 0{,}99");
+    expect(t.resultado).toBe("\\dfrac{0{,}009}{0{,}207} = 4{,}35\\,\\%");
+  });
+
+  it("no usa punto decimal ni comandos de red", () => {
+    const t = texBayes(PREVALENCIA, 0.9, 0.8);
+    for (const s of Object.values(t)) {
+      expect(s).not.toMatch(/\d\.\d/);
+      expect(s).not.toMatch(/\\(url|href|includegraphics|input)/);
+    }
+  });
+
+  it("resalta numerador y denominador con clases del tema", () => {
+    const t = texBayes(PREVALENCIA, 0.9, 0.8);
+    expect(t.simbolica).toContain("\\htmlClass{tex-num}");
+    expect(t.simbolica).toContain("\\htmlClass{tex-den}");
   });
 });

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
-import type { PasosBayes } from "@/lib/formula-bayes";
+import { texBayes, type PasosBayes } from "@/lib/formula-bayes";
+import { Formula } from "./Formula";
+import { FrecuenciasBarra } from "./FrecuenciasBarra";
 
 function Paso({ n, titulo, children }: { n: number; titulo: string; children: ReactNode }) {
   return (
@@ -21,12 +23,21 @@ function Paso({ n, titulo, children }: { n: number; titulo: string; children: Re
 
 export function FormulaBayes({ pasos }: { pasos: PasosBayes }) {
   const t = pasos.texto;
+  const tex = texBayes(pasos.prevalencia, pasos.sensibilidad, pasos.especificidad);
   return (
     <Card className="flex flex-col gap-4">
       <CardTitle>La fórmula de Bayes, paso a paso</CardTitle>
-      <p className="rounded-lg bg-surface-2 p-3 font-semibold [overflow-wrap:anywhere]">
-        P(E|+) = P(+|E)·P(E) / [P(+|E)·P(E) + P(+|S)·P(S)]
-      </p>
+      <div className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3">
+        <Formula
+          tex={tex.simbolica}
+          ariaLabel="P de enfermo dado positivo es igual a P de positivo dado enfermo por P de enfermo, dividido entre ese mismo producto más P de positivo dado sano por P de sano"
+        />
+        <Formula
+          tex={tex.sustitucion}
+          ariaLabel={`Con los datos: ${t.numerador} dividido entre ${t.sumaDenominador}`}
+        />
+        <Formula tex={tex.resultado} ariaLabel={`${t.valores} = ${t.resultado}`} />
+      </div>
       <ol className="flex flex-col gap-3">
         <Paso n={1} titulo="Los datos">
           Prevalencia {t.prevalencia}, sensibilidad {t.sensibilidad}, especificidad {t.especificidad}.
@@ -40,7 +51,7 @@ export function FormulaBayes({ pasos }: { pasos: PasosBayes }) {
         </Paso>
       </ol>
       <p className="text-lg font-semibold">Un positivo está enfermo con probabilidad {t.resultado}.</p>
-      <p className="text-muted">{t.frecuencias}</p>
+      <FrecuenciasBarra pasos={pasos} />
     </Card>
   );
 }

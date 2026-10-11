@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { Users } from "lucide-react";
+import { IconoBrillo } from "@/components/game/IconoBrillo";
 import { Card } from "@/components/ui/card";
 import { formatoEntero } from "@/lib/panel";
 
@@ -15,7 +16,7 @@ export function ContadorPartidas({ total }: Props) {
   return (
     <Card className="flex flex-col items-center gap-1 p-6 text-center">
       <p className="flex items-center gap-3 text-3xl font-semibold text-muted">
-        <Users aria-hidden="true" className="size-9" />
+        <IconoBrillo Icono={Users} tamano="size-9" retardo={4.8} />
         Partidas jugadas
       </p>
       <motion.p

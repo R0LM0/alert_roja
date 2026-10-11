@@ -10,6 +10,7 @@ import {
   type GrupoClave,
 } from "@/lib/ciudad-layout";
 import { coloresTema } from "@/lib/confeti";
+import { prefiereReducido } from "./CiudadRevelacion";
 
 const dummy = new THREE.Object3D();
 
@@ -19,13 +20,35 @@ const POSITIVOS: readonly GrupoClave[] = ["VP", "FP"] as const;
 /** Reparto decorativo fijo: el fondo no calcula estadística real. */
 const REPARTO_FONDO = { vp: 90, fp: 180, fn: 10, vn: 720 };
 
+/** Giro lento del conjunto (rad/s) y deriva vertical de cada esfera. */
+const VELOCIDAD_GIRO = 0.035;
+const AMPLITUD_FLOTE = 0.35;
+const PASO_FLOTE = 1 / 30;
+
 function Fondo({ esferas, pulso }: { esferas: EsferaLayout[]; pulso: number }) {
   const malla = useRef<THREE.InstancedMesh>(null!);
   const destello = useRef(0);
   const aplicado = useRef(-1);
   const base = useRef<THREE.Color[]>([]);
+  const color = useRef(new THREE.Color());
   const rojo = useRef(new THREE.Color("#dc2626"));
   const primero = useRef(true);
+  const reducido = useRef(false);
+  const tiempo = useRef(0);
+  const acumulado = useRef(0);
+  // Fase y ritmo propios de cada esfera, para que la deriva no sea sincrónica.
+  const fases = useMemo(() => {
+    const a = new Float32Array(TOTAL_ESFERAS * 2);
+    for (let i = 0; i < TOTAL_ESFERAS; i++) {
+      a[i * 2] = Math.random() * Math.PI * 2;
+      a[i * 2 + 1] = 0.25 + Math.random() * 0.35;
+    }
+    return a;
+  }, []);
+
+  useEffect(() => {
+    reducido.current = prefiereReducido();
+  }, []);
 
   // Colores base tenues desde los tokens del tema.
   useEffect(() => {
@@ -61,13 +84,29 @@ function Fondo({ esferas, pulso }: { esferas: EsferaLayout[]; pulso: number }) {
 
   useFrame((_, dt) => {
     if (!malla.current || base.current.length === 0) return;
+    if (!reducido.current) {
+      malla.current.rotation.y += dt * VELOCIDAD_GIRO;
+      tiempo.current += dt;
+      acumulado.current += dt;
+      if (acumulado.current >= PASO_FLOTE) {
+        acumulado.current = 0;
+        const t = tiempo.current;
+        for (let i = 0; i < TOTAL_ESFERAS; i++) {
+          const [x, y, z] = esferas[i].ciudad;
+          dummy.position.set(x, y + Math.sin(t * fases[i * 2 + 1] + fases[i * 2]) * AMPLITUD_FLOTE, z);
+          dummy.updateMatrix();
+          malla.current.setMatrixAt(i, dummy.matrix);
+        }
+        malla.current.instanceMatrix.needsUpdate = true;
+      }
+    }
     if (destello.current > 0) destello.current = Math.max(0, destello.current - dt * 0.8);
     if (Math.abs(destello.current - aplicado.current) < 0.01) return;
     aplicado.current = destello.current;
     const f = destello.current;
     for (let i = 0; i < TOTAL_ESFERAS; i++) {
       if (POSITIVOS.includes(esferas[i].grupo)) {
-        malla.current.setColorAt(i, base.current[i].clone().lerp(rojo.current, f));
+        malla.current.setColorAt(i, color.current.copy(base.current[i]).lerp(rojo.current, f));
       }
     }
     if (malla.current.instanceColor) malla.current.instanceColor.needsUpdate = true;
@@ -85,8 +124,8 @@ function Fondo({ esferas, pulso }: { esferas: EsferaLayout[]; pulso: number }) {
 
   return (
     <instancedMesh ref={malla} args={[undefined, undefined, TOTAL_ESFERAS]} frustumCulled={false}>
-      <sphereGeometry args={[0.16, 8, 8]} />
-      <meshBasicMaterial toneMapped={false} transparent opacity={0.7} />
+      <sphereGeometry args={[0.2, 8, 8]} />
+      <meshBasicMaterial toneMapped={false} transparent opacity={0.85} />
     </instancedMesh>
   );
 }
