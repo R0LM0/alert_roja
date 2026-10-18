@@ -200,7 +200,15 @@ function Escenario() {
   );
 }
 
-function Habitacion({ alListo, listo }: { alListo: () => void; listo: boolean }) {
+type PropsHabitacion = {
+  alListo: () => void;
+  listo: boolean;
+  semillaPaciente?: string;
+  saliendoPaciente?: boolean;
+  alLlegarPaciente?: () => void;
+};
+
+function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, alLlegarPaciente }: PropsHabitacion) {
   const { camera } = useThree();
   const bisagra = useRef<THREE.Group>(null);
   const inicio = useRef<number | null>(null);
@@ -227,7 +235,15 @@ function Habitacion({ alListo, listo }: { alListo: () => void; listo: boolean })
   return (
     <>
       <Escenario />
-      {listo && <Paciente reducido={reducido.current} />}
+      {listo && semillaPaciente && (
+        <Paciente
+          key={semillaPaciente}
+          seed={semillaPaciente}
+          saliendo={!!saliendoPaciente}
+          alLlegar={alLlegarPaciente}
+          reducido={reducido.current}
+        />
+      )}
       {/* El borde izquierdo coincide con el marco; el panel gira hacia dentro. */}
       <group ref={bisagra} position={[-0.7, 0, -3.95]}>
         <mesh position={[0.7, 1.3, 0]}>
@@ -243,8 +259,15 @@ function Habitacion({ alListo, listo }: { alListo: () => void; listo: boolean })
   );
 }
 
+type PropsConsultorio3D = {
+  alListo?: () => void;
+  semillaPaciente?: string;
+  saliendoPaciente?: boolean;
+  alLlegarPaciente?: () => void;
+};
+
 /** Decorado de consultorio en primera persona; vuelve al SVG si falta WebGL. */
-export default function Consultorio3D({ alListo }: { alListo?: () => void }) {
+export default function Consultorio3D({ alListo, semillaPaciente, saliendoPaciente, alLlegarPaciente }: PropsConsultorio3D) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [listo, setListo] = useState(false);
@@ -296,7 +319,13 @@ export default function Consultorio3D({ alListo }: { alListo?: () => void }) {
         camera={{ position: [0, 1.6, -5.4], fov: 68 }}
         frameloop={visible ? (listo && reducido ? "demand" : "always") : "never"}
       >
-        <Habitacion alListo={avisar} listo={listo} />
+        <Habitacion
+          alListo={avisar}
+          listo={listo}
+          semillaPaciente={semillaPaciente}
+          saliendoPaciente={saliendoPaciente}
+          alLlegarPaciente={alLlegarPaciente}
+        />
       </Canvas>
     </div>
   );

@@ -4,31 +4,54 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { getPatientAvatarUri } from "@/components/game/patient-avatar";
-import { fasePaciente, pasoWalk, posPaciente } from "@/lib/paciente3d";
+import { debeAvisarLlegada, fasePaciente, pasoWalk, posPaciente } from "@/lib/paciente3d";
 
-/** Paciente de muestra; T3 reemplazará este ciclo por la ronda real. */
-export function Paciente({ reducido }: { reducido: boolean }) {
-  const uri = useMemo(() => getPatientAvatarUri("paciente-demostracion"), []);
+type PropsPaciente = {
+  seed: string;
+  saliendo: boolean;
+  alLlegar?: () => void;
+  reducido: boolean;
+};
+
+/** Un paciente por turno; el cambio de key remonta el recorrido de entrada. */
+export function Paciente({ seed, saliendo, alLlegar, reducido }: PropsPaciente) {
+  const uri = useMemo(() => getPatientAvatarUri(seed), [seed]);
   const cara = useLoader(THREE.TextureLoader, uri);
   const grupo = useRef<THREE.Group>(null);
   const piernaIzquierda = useRef<THREE.Group>(null);
   const piernaDerecha = useRef<THREE.Group>(null);
   const brazoIzquierdo = useRef<THREE.Group>(null);
   const brazoDerecho = useRef<THREE.Group>(null);
-  const inicio = useRef<number | null>(null);
+  const inicioEntrada = useRef<number | null>(null);
+  const inicioSalida = useRef<number | null>(null);
+  const llegadaAvisada = useRef(false);
+  const alLlegarActual = useRef(alLlegar);
+  alLlegarActual.current = alLlegar;
 
   useEffect(() => {
     cara.colorSpace = THREE.SRGBColorSpace;
     cara.needsUpdate = true;
   }, [cara]);
 
+  useEffect(() => {
+    if (!debeAvisarLlegada(0, llegadaAvisada.current, reducido, saliendo) || !reducido) return;
+    llegadaAvisada.current = true;
+    alLlegarActual.current?.();
+  }, [reducido, saliendo]);
+
   useFrame(({ clock }) => {
     if (!grupo.current || reducido) return;
-    if (inicio.current === null) inicio.current = clock.elapsedTime;
-    const t = (clock.elapsedTime - inicio.current) * 1000;
-    const fase = fasePaciente(t);
+    const ahora = clock.elapsedTime;
+    if (inicioEntrada.current === null) inicioEntrada.current = ahora;
+    if (saliendo && inicioSalida.current === null) inicioSalida.current = ahora;
+    const t = (ahora - (saliendo ? inicioSalida.current! : inicioEntrada.current)) * 1000;
+    const fase = fasePaciente(t, saliendo);
+    if (debeAvisarLlegada(t, llegadaAvisada.current, reducido, saliendo)) {
+      llegadaAvisada.current = true;
+      alLlegarActual.current?.();
+    }
     grupo.current.visible = fase !== "fuera";
-    grupo.current.position.set(...posPaciente(t));
+    grupo.current.position.set(...posPaciente(t, saliendo));
     grupo.current.rotation.y = fase === "saliendo" ? Math.PI : 0;
     const swing = fase === "entrando" || fase === "saliendo" ? Math.sin(pasoWalk(t)) * 0.5 : 0;
     if (piernaIzquierda.current) piernaIzquierda.current.rotation.x = swing;
@@ -37,8 +60,10 @@ export function Paciente({ reducido }: { reducido: boolean }) {
     if (brazoDerecho.current) brazoDerecho.current.rotation.x = swing * 0.45;
   });
 
+  if (reducido && saliendo) return null;
+
   return (
-    <group ref={grupo} position={reducido ? [0, 0, 0] : [0, 0, -3.6]}>
+    <group ref={grupo} position={posPaciente(0, false, reducido)}>
       <group ref={piernaIzquierda} position={[-0.13, 0.63, 0]}>
         <mesh position={[0, -0.32, 0]}>
           <boxGeometry args={[0.19, 0.62, 0.2]} />

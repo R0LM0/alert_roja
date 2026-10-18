@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Timer, TimerOff, TriangleAlert } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { DURACION_SALIDA_MS } from "@/lib/paciente3d";
 import { Card } from "@/components/ui/card";
 // Escena 3D en primera persona (carga solo en el cliente, sin SSR); si falta
 // WebGL el propio componente vuelve al flujo 2D (fallback S10).
@@ -30,7 +31,6 @@ import {
 import { guardarResultado, leerApodo } from "@/lib/sesion-juego";
 
 const SEGUNDOS_POR_PACIENTE = 15;
-const PAUSA_TIEMPO_AGOTADO_MS = 1500;
 const ESTIMACION_INICIAL = 50;
 
 type Fase = "cargando" | "jugando" | "enviando" | "error";
@@ -54,6 +54,10 @@ export function Turno({ modo }: { modo: Modo }) {
   const [tiempoAgotado, setTiempoAgotado] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
   const [escenaLista, setEscenaLista] = useState(false);
+  // El paciente de la ronda entra caminando: la tarjeta y el cronómetro esperan
+  // a que llegue a su silla (S7). Al decidir, sale caminando antes del siguiente.
+  const [llegoPaciente, setLlegoPaciente] = useState(false);
+  const [saliendoPaciente, setSaliendoPaciente] = useState(false);
   const movimientoReducido = useReducedMotion() ?? false;
 
   const respuestas = useRef<RespuestaUI[]>([]);
@@ -109,10 +113,10 @@ export function Turno({ modo }: { modo: Modo }) {
     clearTimeout(puerta.current);
   }, []);
 
-  // Cronómetro del tiempo de respuesta: arranca al mostrarse cada paciente.
+  // Cronómetro del tiempo de respuesta: arranca cuando el paciente llega a su silla.
   useEffect(() => {
-    if (fase === "jugando" && escenaLista) inicioPaciente.current = performance.now();
-  }, [fase, escenaLista, indice]);
+    if (fase === "jugando" && escenaLista && llegoPaciente) inicioPaciente.current = performance.now();
+  }, [fase, escenaLista, llegoPaciente, indice]);
 
   function cambiarEstimacion(pct: number) {
     estimacionRef.current = pct;
@@ -127,13 +131,16 @@ export function Turno({ modo }: { modo: Modo }) {
     ocupado.current = false;
     setTiempoAgotado(false);
     cambiarEstimacion(ESTIMACION_INICIAL);
+    setLlegoPaciente(false);
+    setSaliendoPaciente(false);
     setIndice(indice + 1);
   }
 
   /**
    * Si se agota el tiempo NO se decide por el jugador a ciegas: se envía la estimación actual
    * del termómetro y el paciente queda LIBERADO (no actuar = no aislar). Se muestra un aviso
-   * ámbar 1,5 s y se pasa al siguiente. El tiempo registrado es el real (~15 s).
+   * ámbar mientras el paciente sale caminando y se pasa al siguiente. El tiempo registrado
+   * es el real (~15 s).
    */
   function decidir(decision: Decision, porTiempo = false) {
     if (fase !== "jugando" || ocupado.current) return;
@@ -147,11 +154,13 @@ export function Turno({ modo }: { modo: Modo }) {
         tiempo_ms: performance.now() - inicioPaciente.current,
       },
     ];
+    // El paciente sale caminando (~2 s) y recién entonces entra el siguiente.
+    setSaliendoPaciente(true);
     if (porTiempo) {
       setTiempoAgotado(true);
-      pausa.current = setTimeout(avanzar, PAUSA_TIEMPO_AGOTADO_MS);
+      pausa.current = setTimeout(avanzar, DURACION_SALIDA_MS);
     } else {
-      avanzar();
+      pausa.current = setTimeout(avanzar, DURACION_SALIDA_MS);
     }
   }
   useEffect(() => {
@@ -160,7 +169,7 @@ export function Turno({ modo }: { modo: Modo }) {
 
   // Cuenta regresiva con fecha límite (robusta si el navegador frena los timers).
   useEffect(() => {
-    if (fase !== "jugando" || !conTiempo || tiempoAgotado || !escenaLista) return;
+    if (fase !== "jugando" || !conTiempo || tiempoAgotado || !escenaLista || !llegoPaciente) return;
     const fin = Date.now() + SEGUNDOS_POR_PACIENTE * 1000;
     setRestantes(SEGUNDOS_POR_PACIENTE);
     const id = setInterval(() => {
@@ -172,7 +181,7 @@ export function Turno({ modo }: { modo: Modo }) {
       }
     }, 250);
     return () => clearInterval(id);
-  }, [fase, conTiempo, tiempoAgotado, escenaLista, indice]);
+  }, [fase, conTiempo, tiempoAgotado, escenaLista, llegoPaciente, indice]);
 
   async function finalizar() {
     if (enviada.current) return;
@@ -249,17 +258,22 @@ export function Turno({ modo }: { modo: Modo }) {
     >
       {/* Escena 3D detrás del juego: misma posición que en cargando para no rearmarla.
           La tarjeta trae fondo sólido y la escena queda legible alrededor. */}
-      <Consultorio3D alListo={alEstarListo} />
+      <Consultorio3D
+        alListo={alEstarListo}
+        semillaPaciente={paciente.seed}
+        saliendoPaciente={saliendoPaciente}
+        alLlegarPaciente={() => setLlegoPaciente(true)}
+      />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
 
-      {!escenaLista ? (
+      {!escenaLista || !llegoPaciente ? (
         <p
           role="status"
           className="relative z-10 mx-auto mt-24 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
         >
-          Entrando al consultorio…
+          {!escenaLista ? "Entrando al consultorio…" : "El paciente se acerca…"}
         </p>
       ) : (
         <>
