@@ -33,6 +33,26 @@
   --shadow-glow: 0 0 0 1px rgb(220 38 38 / 0.35), 0 8px 28px -8px rgb(220 38 38 / 0.45);
 
   --touch: 2.75rem; /* 44px */
+
+  /* Paleta propia del consultorio (S12): ilustración clara sobre el fondo oscuro.
+     No reutiliza los tokens surface/border: rellenos planos luminosos con
+     contorno de tinta y sombra suave, estilo dibujo a mano. */
+  --cons-ink: #2b2440; /* contorno de tinta: 12.6:1 sobre --cons-wall */
+  --cons-wall: #fff3d6; /* crema de pared */
+  --cons-wall-low: #f2d8a4; /* guardabarros de la pared */
+  --cons-floor: #e09543; /* piso cálido */
+  --cons-floor-line: #b56a24; /* juntas del piso */
+  --cons-door: #2ec4b6; /* puerta turquesa */
+  --cons-door-dark: #159485; /* panel interior de la puerta */
+  --cons-chair: #ff6b6b; /* sillas coral */
+  --cons-chair-alt: #ffa62b; /* silla central ámbar */
+  --cons-bed: #4cc9f0; /* mantas celestes */
+  --cons-sheet: #ffffff; /* sábanas */
+  --cons-desk: #7c5cbf; /* escritorio violeta */
+  --cons-paper: #fffdf4; /* papeles */
+  --cons-cross: #e63946; /* cruz del cartel */
+  --cons-plant: #3fa34d; /* planta */
+  --cons-shadow: rgb(43 36 64 / 0.22); /* sombra suave del piso */
 }
 
 @theme inline {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ORDEN_ENSAMBLADO,
+  duracionEnsamblado,
   planEnsamblado,
   sinSolape,
   type CapaEscena,
@@ -26,10 +27,13 @@ describe("planEnsamblado (armado de la escena)", () => {
     }
   });
 
-  it("el armado completo termina rápido: no retrasa el inicio del juego", () => {
+  it("el armado dura unos 2 s y se ve antes de la primera tarjeta (S13)", () => {
+    const total = duracionEnsamblado(false);
+    expect(total).toBeGreaterThanOrEqual(1800);
+    expect(total).toBeLessThanOrEqual(2300);
+    // El escalonado cruza toda la ventana: la última capa entra tarde.
     const plan = planEnsamblado(false);
-    const ultima = plan[plan.length - 1];
-    expect(ultima.retardoMs).toBeLessThan(1500);
+    expect(plan[plan.length - 1].retardoMs).toBeGreaterThanOrEqual(1200);
   });
 
   it("cada capa queda dentro del lienzo (porcentajes 0..100)", () => {

@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Timer, TimerOff, TriangleAlert } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { duracionEnsamblado } from "@/lib/consultorio-layout";
 import { Card } from "@/components/ui/card";
 import { Consultorio } from "@/components/game/consultorio/Consultorio";
 import { CuentaRegresiva } from "@/components/game/cuenta-regresiva";
@@ -47,6 +49,8 @@ export function Turno({ modo }: { modo: Modo }) {
   const [restantes, setRestantes] = useState(SEGUNDOS_POR_PACIENTE);
   const [tiempoAgotado, setTiempoAgotado] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
+  const [escenaLista, setEscenaLista] = useState(false);
+  const movimientoReducido = useReducedMotion() ?? false;
 
   const respuestas = useRef<RespuestaUI[]>([]);
   const estimacionRef = useRef(ESTIMACION_INICIAL);
@@ -73,12 +77,24 @@ export function Turno({ modo }: { modo: Modo }) {
     setFase("jugando");
   }, [router, prevalencia]);
 
+  // La primera tarjeta aparece cuando el armado termina (S13); con movimiento
+  // reducido la escena ya está completa y no se espera.
+  useEffect(() => {
+    if (fase !== "jugando") return;
+    if (movimientoReducido) {
+      setEscenaLista(true);
+      return;
+    }
+    const id = setTimeout(() => setEscenaLista(true), duracionEnsamblado(false));
+    return () => clearTimeout(id);
+  }, [fase, movimientoReducido]);
+
   useEffect(() => () => clearTimeout(pausa.current), []);
 
   // Cronómetro del tiempo de respuesta: arranca al mostrarse cada paciente.
   useEffect(() => {
-    if (fase === "jugando") inicioPaciente.current = performance.now();
-  }, [fase, indice]);
+    if (fase === "jugando" && escenaLista) inicioPaciente.current = performance.now();
+  }, [fase, escenaLista, indice]);
 
   function cambiarEstimacion(pct: number) {
     estimacionRef.current = pct;
@@ -126,7 +142,7 @@ export function Turno({ modo }: { modo: Modo }) {
 
   // Cuenta regresiva con fecha límite (robusta si el navegador frena los timers).
   useEffect(() => {
-    if (fase !== "jugando" || !conTiempo || tiempoAgotado) return;
+    if (fase !== "jugando" || !conTiempo || tiempoAgotado || !escenaLista) return;
     const fin = Date.now() + SEGUNDOS_POR_PACIENTE * 1000;
     setRestantes(SEGUNDOS_POR_PACIENTE);
     const id = setInterval(() => {
@@ -138,7 +154,7 @@ export function Turno({ modo }: { modo: Modo }) {
       }
     }, 250);
     return () => clearInterval(id);
-  }, [fase, conTiempo, tiempoAgotado, indice]);
+  }, [fase, conTiempo, tiempoAgotado, escenaLista, indice]);
 
   async function finalizar() {
     if (enviada.current) return;
@@ -203,11 +219,22 @@ export function Turno({ modo }: { modo: Modo }) {
   const paciente = ronda[indice];
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
-      {/* Escena detrás del juego: misma posición que en cargando para no rearmarla. */}
-      <Consultorio atenuado />
+      {/* Escena detrás del juego: misma posición que en cargando para no rearmarla.
+          Sin atenuado: la tarjeta trae fondo sólido y la escena queda legible (S14). */}
+      <Consultorio />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
+
+      {!escenaLista ? (
+        <p
+          role="status"
+          className="relative z-10 mx-auto mt-24 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
+        >
+          Armando el consultorio…
+        </p>
+      ) : (
+        <>
 
       <div className="flex items-start gap-4 pr-12">
         <ProgresoPacientes actual={indice + 1} total={ronda.length} className="grow" />
@@ -251,6 +278,8 @@ export function Turno({ modo }: { modo: Modo }) {
         onDecidir={decidir}
         disabled={tiempoAgotado}
       />
+        </>
+      )}
     </main>
   );
 }

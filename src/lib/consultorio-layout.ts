@@ -33,8 +33,11 @@ export const ORDEN_ENSAMBLADO: readonly CapaId[] = [
   "puerta",
 ] as const;
 
-/** Separación entre entradas de capas consecutivas. */
-export const ESCALON_MS = 140;
+/** Separación entre entradas de capas consecutivas: el armado cruza ~2 s (S13). */
+export const ESCALON_MS = 300;
+
+/** Duración de la entrada de cada capa. Última capa: 5×300 + 500 = 2000 ms. */
+export const DURACION_ENTRADA_MS = 500;
 
 /** Línea del piso: todo lo que está apoyado termina exactamente acá. */
 const LINEA_PISO = 58;
@@ -53,6 +56,11 @@ const GEOMETRIA: Omit<CapaEscena, "retardoMs">[] = [
   { id: "puerta", x: 66, y: 12, ancho: 20, alto: LINEA_PISO - 12 },
 ];
 
+/** Duración total del armado en ms (0 con movimiento reducido: estado final directo). */
+export function duracionEnsamblado(reducido: boolean): number {
+  if (reducido) return 0;
+  return (ORDEN_ENSAMBLADO.length - 1) * ESCALON_MS + DURACION_ENTRADA_MS;
+}
 /**
  * Plan de armado de la escena. Con movimiento reducido (S9) no hay escalonado:
  * todas las capas entran juntas y el estado final se muestra de una.
