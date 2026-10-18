@@ -1,5 +1,7 @@
 # Consultorio animado
 
+> SUPERSEDED by `odd/tasks/consultorio-3d.md` (2D approach rejected).
+
 Objective: make the game feel like a game: on "Start" the clinic loads and patients walk in; each turn is animated.
 Branch: `feat/consultorio-animado` (never commit to `main`). One commit per task, Conventional Commits, no AI attribution.
 Runner: `npm run test` (vitest), `npm run build`, `npx playwright test` for e2e. Pause after each task for human validation.
