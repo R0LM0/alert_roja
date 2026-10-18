@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Loader2, Timer, TimerOff, TriangleAlert } from "lucide-react";
-import { useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 // Escena 3D en primera persona (carga solo en el cliente, sin SSR); si falta
@@ -198,8 +198,13 @@ export function Turno({ modo }: { modo: Modo }) {
 
   if (fase === "cargando") {
     return (
-      <main className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-16">
-        {/* Misma posición en las ramas cargando y jugando: la escena se arma una sola vez. */}
+      <motion.main
+        className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-16"
+        initial={movimientoReducido ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
+        {/* Fundido de entrada tras el velo negro + misma posición que en jugando. */}
         <Consultorio3D alListo={alEstarListo} />
         <p
           role="status"
@@ -207,7 +212,7 @@ export function Turno({ modo }: { modo: Modo }) {
         >
           Preparando tu turno…
         </p>
-      </main>
+      </motion.main>
     );
   }
 
@@ -236,7 +241,12 @@ export function Turno({ modo }: { modo: Modo }) {
 
   const paciente = ronda[indice];
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
+    <motion.main
+      className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4"
+      initial={movimientoReducido ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+    >
       {/* Escena 3D detrás del juego: misma posición que en cargando para no rearmarla.
           La tarjeta trae fondo sólido y la escena queda legible alrededor. */}
       <Consultorio3D alListo={alEstarListo} />
@@ -298,6 +308,6 @@ export function Turno({ modo }: { modo: Modo }) {
       />
         </>
       )}
-    </main>
+    </motion.main>
   );
 }

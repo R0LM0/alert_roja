@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { Microscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,11 @@ export function CampoApodo() {
   const router = useRouter();
   const [apodo, setApodo] = useState("");
   const [error, setError] = useState<string | undefined>();
+  const [saliendo, setSaliendo] = useState(false);
+  const reducido = useReducedMotion() ?? false;
+  const salida = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(salida.current), []);
 
   useEffect(() => {
     setApodo(apodoRecordado());
@@ -27,7 +33,15 @@ export function CampoApodo() {
     const limpio = apodo.trim();
     guardarApodo(limpio);
     recordarApodo(limpio);
-    router.push(modo === "experto" ? "/jugar?modo=experto" : "/jugar");
+    const destino = modo === "experto" ? "/jugar?modo=experto" : "/jugar";
+    // Velo de salida: funde a negro antes de navegar para una transición suave.
+    if (saliendo) return;
+    if (reducido) {
+      router.push(destino);
+      return;
+    }
+    setSaliendo(true);
+    salida.current = setTimeout(() => router.push(destino), 280);
   }
 
   return (
@@ -57,6 +71,15 @@ export function CampoApodo() {
       <Button type="submit" size="xl" className="w-full">
         ¡Empezar turno!
       </Button>
+      {saliendo ? (
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-auto fixed inset-0 z-50 bg-background"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+        />
+      ) : null}
       <Button type="button" variant="ghost" className="self-center" onClick={() => empezar("experto")}>
         <Microscope aria-hidden="true" /> Modo experto (enfermedad más rara)
       </Button>
