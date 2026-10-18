@@ -21,7 +21,7 @@ Runner: `npm run test`, `npx playwright test`. Do NOT run `npm run build` while 
 
 ## Tasks
 
-- [ ] T1 (S1,S2,S3,S10) `Consultorio3D` canvas: room, desk, first-person camera, door opening on start. Remove the 2D `Consultorio` mount from `Turno.tsx`.
+- [x] T1 (S1,S2,S3,S10) `Consultorio3D` canvas: room, desk, first-person camera, door opening on start. Remove the 2D `Consultorio` mount from `Turno.tsx`. Commit: `033c3b0`.
 - [ ] T2 (S4,S5) One 3D patient walking in from the door to the desk (hardcoded), then leaving.
 - [ ] T3 (S5,S7,S8) Wire real patients from `ronda` one by one; timer starts on arrival.
 - [ ] T4 (S6) HUD redesign over the canvas for mobile and desktop.
@@ -30,3 +30,4 @@ Runner: `npm run test`, `npx playwright test`. Do NOT run `npm run build` while 
 ## Log
 
 - L1 (2026-10-18): "se supone que era por eso te decia 3d osea como se abre la puerta y nos sentamos en consultorio en primera persona y luego va entrando pasiente por paciente esa era idea no poner algo solo consultorio al fondo te dije pero no me haces caso por eso te decia lo three js".
+- L2 (2026-10-18): T1 implementada en commit `033c3b0` (+ docs). Cobertura: S1 (three/R3F existentes, dynamic ssr:false), S2 (cámara en [0,1.7,2.4] mirando a la puerta, escritorio en primer plano), S3 (puerta gira a -110° con ease-out en 1.5 s + respiro previo de 250 ms; `Turno` muestra la tarjeta 600 ms después del aviso del canvas y el timer arranca ahí), S10 (dpr<=1.5, sin sombras, frameloop a demand al abrir; fallback al flujo 2D sin WebGL). Verificación: 165 tests vitest (7 del timing de la puerta), `tsc --noEmit` limpio, sin build (dev activo). Capturas CLI contra el dev server en `test-results/consultorio-3d/` (gitignored): `390-puerta-cerrada.png`, `390-puerta-abierta.png`, `1280-puerta-cerrada.png`, `1280-puerta-abierta.png` (puerta abierta sin tarjeta todavía). Nota: no correr e2e/build mientras el dev corre; el spec `consultorio-escena` existente sigue válido para T5 contra build.
