@@ -50,6 +50,29 @@ function Silla({ x, color }: { x: number; color: string }) {
   );
 }
 
+function Maceta({ x, z }: { x: number; z: number }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.23, 0]}>
+        <cylinderGeometry args={[0.28, 0.22, 0.42, 8]} />
+        <meshLambertMaterial color="#a96c55" />
+      </mesh>
+      <mesh position={[-0.13, 0.64, 0]} scale={[1, 1.25, 0.85]}>
+        <sphereGeometry args={[0.23, 8, 6]} />
+        <meshLambertMaterial color="#467d60" />
+      </mesh>
+      <mesh position={[0.13, 0.76, -0.07]} scale={[1, 1.35, 0.85]}>
+        <sphereGeometry args={[0.23, 8, 6]} />
+        <meshLambertMaterial color="#62966b" />
+      </mesh>
+      <mesh position={[0, 0.98, 0.06]} scale={[0.9, 1.15, 0.85]}>
+        <sphereGeometry args={[0.2, 8, 6]} />
+        <meshLambertMaterial color="#467d60" />
+      </mesh>
+    </group>
+  );
+}
+
 function Escenario() {
   return (
     <>
@@ -57,8 +80,15 @@ function Escenario() {
       <directionalLight position={[2, 4, 3]} intensity={0.5} />
       {/* Pasillo estrecho: la abertura deja ver el interior cálido desde la oscuridad. */}
       <Caja posicion={[0, -0.06, -6.4]} tamano={[4.2, 0.1, 5]} color="#14101c" />
-      <Caja posicion={[-2.1, 1.5, -6.4]} tamano={[0.1, 3, 5]} color="#1e1726" />
-      <Caja posicion={[2.1, 1.5, -6.4]} tamano={[0.1, 3, 5]} color="#1e1726" />
+      {/* El pasillo termina detrás de la cara posterior del muro (-4.05):
+          antes llegaba a -3.9 y sus testas oscuras se veían sobre el muro crema. */}
+      <Caja posicion={[-2.1, 1.5, -6.5]} tamano={[0.1, 3, 4.8]} color="#1e1726" />
+      <Caja posicion={[2.1, 1.5, -6.5]} tamano={[0.1, 3, 4.8]} color="#1e1726" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -5.55]}>
+        <planeGeometry args={[1.45, 2.8]} />
+        <meshLambertMaterial color="#875a54" />
+      </mesh>
+      <Maceta x={1.45} z={-5.7} />
       <mesh position={[0, 2.35, -8.3]}>
         <planeGeometry args={[0.42, 0.25]} />
         <meshBasicMaterial color="#db945f" transparent opacity={0.7} />
@@ -82,6 +112,11 @@ function Escenario() {
       <Caja posicion={[-4.9, 0.12, 0.5]} tamano={[0.12, 0.24, 8.8]} color="#ad745e" />
       <Caja posicion={[4.9, 0.12, 0.5]} tamano={[0.12, 0.24, 8.8]} color="#ad745e" />
       <Caja posicion={[0, 0.12, 4.87]} tamano={[9.8, 0.24, 0.12]} color="#ad745e" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -3.3]}>
+        <planeGeometry args={[1.3, 0.48]} />
+        <meshLambertMaterial color="#ad745e" />
+      </mesh>
+      <Maceta x={-4.25} z={-3.15} />
 
       <Sombra x={0} z={-0.45} radio={1.6} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, -0.45]}>
@@ -129,6 +164,14 @@ function Escenario() {
       </mesh>
       <Silla x={-2.5} color="#d57670" />
       <Silla x={2.5} color="#d9a455" />
+
+      {/* Reloj discreto sobre el muro, lejos del marco de la puerta. */}
+      <mesh position={[-3.55, 2.35, -3.875]}>
+        <circleGeometry args={[0.26, 16]} />
+        <meshLambertMaterial color="#fff1dc" />
+      </mesh>
+      <Caja posicion={[-3.55, 2.43, -3.83]} tamano={[0.025, 0.16, 0.02]} color="#493448" />
+      <Caja posicion={[-3.48, 2.35, -3.83]} tamano={[0.14, 0.025, 0.02]} color="#493448" />
 
       {/* Cartel y póster en la pared de la puerta, dentro del encuadre final. */}
       <Caja posicion={[-1.15, 1.9, -3.91]} tamano={[0.68, 0.68, 0.07]} color="#ffffff" />
