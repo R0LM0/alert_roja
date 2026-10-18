@@ -25,12 +25,12 @@ Runner: `npm run test`, `npx playwright test`. Do NOT run `npm run build` while 
 
 - [x] T1 (S1,S2,S3,S10) `Consultorio3D` canvas: room, desk, first-person camera, door opening on start. Remove the 2D `Consultorio` mount from `Turno.tsx`. Commit: `033c3b0`.
 - [x] T1 v3 (S2,S3,S9,S10,S14) Intro cinematográfica (pasillo, puerta, cámara que entra, se sienta y gira) + upgrade visual del set. `Turno` espera `listo`. Commit: `479f46e`.
-- [ ] T1 v4 (S10,S14) Pulido visual: diagnosticar y quitar las barras negras junto a la puerta (ver `test-results/consultorio-3d/ref-usuario-barras.png`), macetas y ambiente (pasillo + consultorio).
+- [x] T1 v4 (S10,S14) Pulido visual: diagnosticar y quitar las barras negras junto a la puerta (ver `test-results/consultorio-3d/ref-usuario-barras.png`), macetas y ambiente (pasillo + consultorio). Commit: `4cb5015` (código) — diagnóstico: eran los extremos de las paredes del pasillo asomando delante de la pared crema; se acortaron tras ella. Suma: 2 macetas, alfombra de pasillo, tapete, reloj de pared (13 mallas).
 - [ ] T6 (S13) Escenas finales ciudad infectada/salvada según liberados + teorema existente.
 - [ ] T2 (S4,S5) One 3D patient walking in from the door to the desk (hardcoded), then leaving.
 - [ ] T3 (S5,S7,S8) Wire real patients from `ronda` one by one; timer starts on arrival.
 - [ ] T4 (S6) HUD redesign over the canvas for mobile and desktop.
-- [ ] T5 (S9,S10,S11) Reduced motion, WebGL fallback, polish, sounds; run `npm run test` and e2e.
+- [ ] T5 (S9,S10,S11) Reduced motion, WebGL fallback, polish, sounds (incluye: crear/reanudar AudioContext solo tras gesto — warning actual en consola); run `npm run test` and e2e.
 
 ## Log
 
