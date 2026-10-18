@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Loader2, Timer, TimerOff, TriangleAlert } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { duracionEnsamblado } from "@/lib/consultorio-layout";
 import { Card } from "@/components/ui/card";
-import { Consultorio } from "@/components/game/consultorio/Consultorio";
+// Escena 3D en primera persona (carga solo en el cliente, sin SSR); si falta
+// WebGL el propio componente vuelve al flujo 2D (fallback S10).
+const Consultorio3D = dynamic(() => import("@/components/game/consultorio3d/Consultorio3D"), {
+  ssr: false,
+});
 import { CuentaRegresiva } from "@/components/game/cuenta-regresiva";
 import { ProgresoPacientes } from "@/components/game/progreso-pacientes";
 import { TarjetaPaciente } from "@/components/game/TarjetaPaciente";
@@ -74,22 +78,36 @@ export function Turno({ modo }: { modo: Modo }) {
     setApodo(nombre);
     idPartida.current = nuevoIdPartida(); // clave de idempotencia de esta ronda
     setRonda(crearRonda(nuevaSemilla(), prevalencia));
+    // La escena se monta también en "cargando" y reabre la puerta al entrar
+    // a "jugando": la tarjeta espera a la puerta de esta fase (S3).
+    setEscenaLista(false);
     setFase("jugando");
   }, [router, prevalencia]);
 
-  // La primera tarjeta aparece cuando el armado termina (S13); con movimiento
-  // reducido la escena ya está completa y no se espera.
+  // La primera tarjeta aparece cuando la puerta terminó de abrirse (S3): el
+  // canvas avisa con `alAbrirPuerta` y se deja un respiro de 600 ms para ver
+  // la puerta abierta. Con movimiento reducido no se espera. El respaldo de
+  // 15 s es solo un cortafuegos: el aviso normal llega en ~2 s (el respaldo
+  // por carga lenta vive en el propio canvas, medido desde su montaje).
+  const puerta = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const alAbrirsePuerta = useCallback(() => {
+    clearTimeout(puerta.current);
+    puerta.current = setTimeout(() => setEscenaLista(true), 600);
+  }, []);
   useEffect(() => {
     if (fase !== "jugando") return;
     if (movimientoReducido) {
       setEscenaLista(true);
       return;
     }
-    const id = setTimeout(() => setEscenaLista(true), duracionEnsamblado(false));
+    const id = setTimeout(() => setEscenaLista(true), 15000);
     return () => clearTimeout(id);
   }, [fase, movimientoReducido]);
 
-  useEffect(() => () => clearTimeout(pausa.current), []);
+  useEffect(() => () => {
+    clearTimeout(pausa.current);
+    clearTimeout(puerta.current);
+  }, []);
 
   // Cronómetro del tiempo de respuesta: arranca al mostrarse cada paciente.
   useEffect(() => {
@@ -182,7 +200,7 @@ export function Turno({ modo }: { modo: Modo }) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-16">
         {/* Misma posición en las ramas cargando y jugando: la escena se arma una sola vez. */}
-        <Consultorio />
+        <Consultorio3D alAbrirPuerta={alAbrirsePuerta} />
         <p
           role="status"
           className="relative z-10 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
@@ -219,9 +237,9 @@ export function Turno({ modo }: { modo: Modo }) {
   const paciente = ronda[indice];
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
-      {/* Escena detrás del juego: misma posición que en cargando para no rearmarla.
-          Sin atenuado: la tarjeta trae fondo sólido y la escena queda legible (S14). */}
-      <Consultorio />
+      {/* Escena 3D detrás del juego: misma posición que en cargando para no rearmarla.
+          La tarjeta trae fondo sólido y la escena queda legible alrededor. */}
+      <Consultorio3D alAbrirPuerta={alAbrirsePuerta} />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
