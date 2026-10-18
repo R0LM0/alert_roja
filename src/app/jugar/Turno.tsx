@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Timer, TimerOff, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Consultorio } from "@/components/game/consultorio/Consultorio";
 import { CuentaRegresiva } from "@/components/game/cuenta-regresiva";
 import { ProgresoPacientes } from "@/components/game/progreso-pacientes";
 import { TarjetaPaciente } from "@/components/game/TarjetaPaciente";
@@ -164,7 +165,12 @@ export function Turno({ modo }: { modo: Modo }) {
   if (fase === "cargando") {
     return (
       <main className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-16">
-        <p role="status" className="text-lg text-muted">
+        {/* Misma posición en las ramas cargando y jugando: la escena se arma una sola vez. */}
+        <Consultorio />
+        <p
+          role="status"
+          className="relative z-10 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
+        >
           Preparando tu turno…
         </p>
       </main>
@@ -197,6 +203,8 @@ export function Turno({ modo }: { modo: Modo }) {
   const paciente = ronda[indice];
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
+      {/* Escena detrás del juego: misma posición que en cargando para no rearmarla. */}
+      <Consultorio atenuado />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
