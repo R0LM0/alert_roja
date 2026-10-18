@@ -17,10 +17,15 @@ Runner: `npm run test` (vitest), `npm run build`, `npx playwright test` for e2e.
 - S9. Respect `useReducedMotion()`: with reduced motion, skip walking and stagger, show the final state.
 - S10. Mobile-first and responsive; must not break `/jugar` flow, timer (`cuenta-regresiva.tsx`) or game logic in `src/app/jugar/Turno.tsx` (phases: cargando | jugando | enviando | error).
 - S11. Animation is presentation only: do not change scoring, seeds, patient generation or API payloads.
+- S12. The clinic must be clearly visible: colorful, high-contrast palette defined as CSS variables in `globals.css` (do not reuse the dark surface/border tokens). Illustrated SVG look (ink outlines, flat fills, soft floor shadow), inspired by hand-inked isometric figures.
+- S13. The assemble animation lasts about 2 s and is clearly visible; the first patient card appears only after it ends (skipped with reduced motion).
+- S14. During the round the scene is NOT heavily dimmed: at most a light overlay behind the card, scene still readable.
+- S15. Validate visually with Playwright screenshots (mobile 390px and desktop 1280px) at ~300ms, ~1200ms and during the first patient turn; attach the paths in the report.
 
 ## Tasks
 
-- [x] T1 (S1,S2,S3,S9,S10) Create `src/components/game/consultorio/Consultorio.tsx` static layered scene + intro assemble animation; mount it in `/jugar` during `cargando` and behind `jugando`. Commit: `ec5684f`.
+- [ ] T1 v2 (S12-S15, redo): previous version at `ec5684f` was nearly invisible (gray on dark, dimmed). Rework `Consultorio.tsx`.
+- [x] T1 v1 (S1,S2,S3,S9,S10) Create `src/components/game/consultorio/Consultorio.tsx` static layered scene + intro assemble animation; mount it in `/jugar` during `cargando` and behind `jugando`. Commit: `ec5684f`.
 - [ ] T2 (S4,S9) Waiting room: patients enter from the door with stagger.
 - [ ] T3 (S5,S10) Active patient to the desk with `layoutId`; show `TarjetaPaciente`.
 - [ ] T4 (S6,S8) Exit animations per decision + sounds + stamp.
@@ -30,3 +35,4 @@ Runner: `npm run test` (vitest), `npm run build`, `npx playwright test` for e2e.
 
 - L1 (2026-10-18): "siento que nuestro juego no es muy juego que digamos .. que tanto seria hacer animado el juego que cuando le demos star como que cargue el consultorio entre los pacientes" and "porfavor para que trabaje en una rama, para ir validando".
 - L2 (2026-10-18): Directiva de sesión: hacer solo T1 y frenar para validación humana. Implementado en commit `ec5684f` (feat(jugar): assemble the clinic scene behind the game). Cobertura: S1 (sin dependencias nuevas; solo `motion/react`), S2 (armado escalonado pared→piso→escritorio→camas→sala-espera→puerta), S3 (estructura en capas del `Consultorio`; los pacientes con `PatientAvatar` quedan para T2), S9 (`useReducedMotion`: estado final sin escalonado), S10 (flujo `/jugar` intacto: 159 tests vitest, build, 3 e2e `jugar-ronda.spec.ts` en verde). Nota: `npm run lint` no existe en alert_roja (scripts: dev/build/start/test/test:e2e/db:migrate).
+- L3 (2026-10-18): User validated T1 v1 in the browser: "casi lo mismo nada hizo la idea". Playwright confirmed the scene is almost invisible. Reopened T1 as v2 with S12-S15.
