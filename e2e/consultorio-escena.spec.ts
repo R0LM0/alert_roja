@@ -24,7 +24,7 @@ async function capturarFlujo(page: Page, nombre: string) {
   await expect(page).toHaveURL(/\/jugar/);
 
   // Armado en curso: el aviso visible prueba que la tarjeta espera a la escena.
-  await expect(page.getByText("Armando el consultorio…")).toBeVisible();
+  await expect(page.getByText("Entrando al consultorio…")).toBeVisible();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${SALIDAS}/${nombre}-armado-300ms.png` });
   await page.waitForTimeout(900);
@@ -33,7 +33,7 @@ async function capturarFlujo(page: Page, nombre: string) {
   // Primera tarjeta con la escena completa detrás: se deja asentar la
   // entrada de la tarjeta para no atraparla a medio fundido.
   await expect(page.getByRole("slider")).toBeVisible();
-  await expect(page.getByText("Armando el consultorio…")).toBeHidden();
+  await expect(page.getByText("Entrando al consultorio…")).toBeHidden();
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${SALIDAS}/${nombre}-primer-paciente.png` });
 

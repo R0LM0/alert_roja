@@ -85,12 +85,12 @@ export function Turno({ modo }: { modo: Modo }) {
   }, [router, prevalencia]);
 
   // La primera tarjeta aparece cuando la puerta terminó de abrirse (S3): el
-  // canvas avisa con `alAbrirPuerta` y se deja un respiro de 600 ms para ver
+  // canvas avisa con `alListo` y se deja un respiro de 600 ms para ver
   // la puerta abierta. Con movimiento reducido no se espera. El respaldo de
   // 15 s es solo un cortafuegos: el aviso normal llega en ~2 s (el respaldo
   // por carga lenta vive en el propio canvas, medido desde su montaje).
   const puerta = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const alAbrirsePuerta = useCallback(() => {
+  const alEstarListo = useCallback(() => {
     clearTimeout(puerta.current);
     puerta.current = setTimeout(() => setEscenaLista(true), 600);
   }, []);
@@ -200,7 +200,7 @@ export function Turno({ modo }: { modo: Modo }) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-col items-center gap-4 px-4 py-16">
         {/* Misma posición en las ramas cargando y jugando: la escena se arma una sola vez. */}
-        <Consultorio3D alAbrirPuerta={alAbrirsePuerta} />
+        <Consultorio3D alListo={alEstarListo} />
         <p
           role="status"
           className="relative z-10 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
@@ -239,7 +239,7 @@ export function Turno({ modo }: { modo: Modo }) {
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-3 pb-4">
       {/* Escena 3D detrás del juego: misma posición que en cargando para no rearmarla.
           La tarjeta trae fondo sólido y la escena queda legible alrededor. */}
-      <Consultorio3D alAbrirPuerta={alAbrirsePuerta} />
+      <Consultorio3D alListo={alEstarListo} />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
       </p>
@@ -249,7 +249,7 @@ export function Turno({ modo }: { modo: Modo }) {
           role="status"
           className="relative z-10 mx-auto mt-24 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
         >
-          Armando el consultorio…
+          Entrando al consultorio…
         </p>
       ) : (
         <>
