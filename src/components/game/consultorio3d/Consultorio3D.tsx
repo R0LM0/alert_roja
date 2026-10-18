@@ -16,6 +16,7 @@ import {
   webglDisponible,
 } from "@/lib/consultorio3d";
 import { duracionEnsamblado } from "@/lib/consultorio-layout";
+import { Paciente } from "./Paciente";
 
 type Punto = [number, number, number];
 const FIN_INTRO_MS = RETRASO_PUERTA_MS + DURACION_PUERTA_MS + DURACION_ENTRADA_MS;
@@ -226,6 +227,7 @@ function Habitacion({ alListo, listo }: { alListo: () => void; listo: boolean })
   return (
     <>
       <Escenario />
+      {listo && <Paciente reducido={reducido.current} />}
       {/* El borde izquierdo coincide con el marco; el panel gira hacia dentro. */}
       <group ref={bisagra} position={[-0.7, 0, -3.95]}>
         <mesh position={[0.7, 1.3, 0]}>
@@ -246,6 +248,7 @@ export default function Consultorio3D({ alListo }: { alListo?: () => void }) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [listo, setListo] = useState(false);
+  const [reducido, setReducido] = useState(false);
   const notificado = useRef(false);
   const montado = useRef<number | null>(null);
   const avisar = useCallback(() => {
@@ -258,6 +261,7 @@ export default function Consultorio3D({ alListo }: { alListo?: () => void }) {
   useEffect(() => {
     montado.current = performance.now();
     setWebgl(webglDisponible());
+    setReducido(prefiereReducido());
     const alCambiarVisibilidad = () => setVisible(document.visibilityState === "visible");
     document.addEventListener("visibilitychange", alCambiarVisibilidad);
     return () => document.removeEventListener("visibilitychange", alCambiarVisibilidad);
@@ -290,7 +294,7 @@ export default function Consultorio3D({ alListo }: { alListo?: () => void }) {
         gl={{ antialias: false }}
         shadows={false}
         camera={{ position: [0, 1.6, -5.4], fov: 68 }}
-        frameloop={visible ? (listo ? "demand" : "always") : "never"}
+        frameloop={visible ? (listo && reducido ? "demand" : "always") : "never"}
       >
         <Habitacion alListo={avisar} listo={listo} />
       </Canvas>

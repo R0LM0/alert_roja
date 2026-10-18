@@ -23,25 +23,26 @@ const FONDOS = ["ffd6cc", "ffe8b3", "d4f1d9", "d3e4ff", "e9d8ff", "ffd9ec"];
 const CARAS = ["calm", "blank", "serious"] as const;
 const ACCESORIOS = ["glasses", "glasses2", "glasses3", "glasses4", "glasses5", "sunglasses"] as const;
 
+/** El mismo avatar neutro del HUD, utilizable también como textura 3D. */
+export function getPatientAvatarUri(seed: string): string {
+  return createAvatar(openPeeps, {
+    seed,
+    face: [...CARAS],
+    backgroundColor: FONDOS,
+    accessories: [...ACCESORIOS],
+    maskProbability: 0,
+    accessoriesProbability: 25,
+    radius: 50,
+  }).toDataUri();
+}
+
 /**
  * Avatar generado localmente (DiceBear "Open Peeps", diseño CC0 de Pablo Stanley);
  * determinista por semilla. Respira con un balanceo suave, salvo con movimiento reducido.
  */
 export function PatientAvatar({ seed, name, className }: PatientAvatarProps) {
   const reducido = useReducedMotion();
-  const uri = useMemo(
-    () =>
-      createAvatar(openPeeps, {
-        seed,
-        face: [...CARAS],
-        backgroundColor: FONDOS,
-        accessories: [...ACCESORIOS],
-        maskProbability: 0,
-        accessoriesProbability: 25,
-        radius: 50,
-      }).toDataUri(),
-    [seed],
-  );
+  const uri = useMemo(() => getPatientAvatarUri(seed), [seed]);
 
   return (
     <motion.div
