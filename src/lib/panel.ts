@@ -34,6 +34,7 @@ export const esquemaRanking = z.object({
       prevalencia: z.number(),
       creada_en: z.string(),
       tiempoTotalMs: z.number().nullable().optional(),
+      insignias: z.array(z.string()).default([]),
     }),
   ),
 });

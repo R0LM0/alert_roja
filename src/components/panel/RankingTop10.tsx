@@ -1,12 +1,34 @@
-import { Medal, Trophy } from "lucide-react";
+import { Brain, Medal, ShieldCheck, Smile, Trophy, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { EntradaRanking } from "@/lib/panel";
-import { ETIQUETA_TEMPORADA_ACTUAL, formatearTiempoTotal } from "@/lib/ranking";
+import { ETIQUETA_TEMPORADA_ACTUAL, formatearTiempoTotal, informacionInsignias } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
 
 type Props = { ranking: EntradaRanking[] | undefined };
 
 const COLOR_PODIO = ["text-warning", "text-foreground", "text-primary-text"] as const;
+const ICONOS: Record<"brain" | "shield-check" | "smile", LucideIcon> = {
+  brain: Brain, "shield-check": ShieldCheck, smile: Smile,
+};
+
+function ChipsInsignias({ ids }: { ids: readonly string[] }) {
+  const insignias = informacionInsignias(ids);
+  if (insignias.length === 0) return null;
+
+  return (
+    <ul className="flex min-w-0 flex-wrap gap-1 pt-1">
+      {insignias.map((insignia) => {
+        const Icono = ICONOS[insignia.icono];
+        return (
+          <li key={insignia.id} className="inline-flex max-w-full items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-foreground">
+            <Icono aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="truncate">{insignia.titulo}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function Posicion({ n }: { n: number }) {
   const Icono = n === 1 ? Trophy : n <= 3 ? Medal : null;
@@ -42,9 +64,12 @@ export function RankingTop10({ ranking }: Props) {
               )}
             >
               <Posicion n={i + 1} />
-              <span className="min-w-0 flex-1 truncate text-lg font-semibold sm:text-3xl" title={e.jugador}>
-                {e.jugador}
-              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-lg font-semibold sm:text-3xl" title={e.jugador}>
+                  {e.jugador}
+                </span>
+                <ChipsInsignias ids={e.insignias} />
+              </div>
               {e.tiempoTotalMs !== undefined && e.tiempoTotalMs !== null ? (
                 <span
                   className="shrink-0 font-display text-base font-semibold tabular-nums text-muted sm:text-3xl"

@@ -6,6 +6,7 @@ import {
   ETIQUETA_TEMPORADA_ACTUAL,
   formatearTiempoTotal,
   INICIO_TEMPORADA_ACTUAL,
+  informacionInsignias,
   NOMBRE_TEMPORADA_ACTUAL,
   normalizarApodo,
   seleccionarPrimerosIntentos,
@@ -92,6 +93,25 @@ describe("seleccionarPrimerosIntentos", () => {
     ];
     const r = seleccionarPrimerosIntentos(filas);
     expect(r.map((x) => x.creadaEn)).toEqual(["2026-01-01T10:00:00Z", "2026-01-01T10:09:00Z", "2026-01-01T10:01:00Z"]);
+  });
+});
+
+describe("informacionInsignias", () => {
+  it("traduce los ids al título e icono del resultado en el mismo orden", () => {
+    expect(informacionInsignias(["perfecto", "ojo-clinico", "cazador", "bayesiano-nato"])).toEqual([
+      { id: "perfecto", titulo: "Ronda perfecta", icono: "smile" },
+      { id: "ojo-clinico", titulo: "Ojo clínico", icono: "brain" },
+      { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
+      { id: "bayesiano-nato", titulo: "Bayesiano nato", icono: "brain" },
+    ]);
+  });
+  it("ignora los ids desconocidos sin crear chips vacíos", () => {
+    expect(informacionInsignias(["desconocido", "cazador"])).toEqual([
+      { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
+    ]);
+  });
+  it("devuelve una lista vacía si no hay insignias", () => {
+    expect(informacionInsignias([])).toEqual([]);
   });
 });
 

@@ -1,4 +1,20 @@
+import type { InsigniaInfo } from "./resultado";
+import type { Insignia } from "./stats";
+
 /** Regla del ranking: solo el primer intento por apodo y dificultad; desempate por menor tiempo total. */
+
+/** Etiquetas breves del catálogo de /resultado; no se exporta allí y el ranking solo necesita título e icono. */
+const INSIGNIAS_RANKING: Record<Insignia, Pick<InsigniaInfo, "id" | "titulo" | "icono">> = {
+  perfecto: { id: "perfecto", titulo: "Ronda perfecta", icono: "smile" },
+  "ojo-clinico": { id: "ojo-clinico", titulo: "Ojo clínico", icono: "brain" },
+  cazador: { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
+  "bayesiano-nato": { id: "bayesiano-nato", titulo: "Bayesiano nato", icono: "brain" },
+};
+
+/** Convierte ids recibidos por la API en chips visibles, omitiendo los que no conoce este cliente. */
+export function informacionInsignias(ids: readonly string[]): Pick<InsigniaInfo, "id" | "titulo" | "icono">[] {
+  return ids.flatMap((id) => Object.hasOwn(INSIGNIAS_RANKING, id) ? [INSIGNIAS_RANKING[id as Insignia]] : []);
+}
 
 export const INICIO_TEMPORADA_ACTUAL = "2026-10-19T00:00:00.000Z";
 export const NOMBRE_TEMPORADA_ACTUAL = "Decisiones";
