@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { ContactShadows, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { Consultorio } from "@/components/game/consultorio/Consultorio";
 import { prefiereReducido } from "@/components/three/CiudadRevelacion";
@@ -22,12 +23,13 @@ import { Paciente } from "./Paciente";
 type Punto = [number, number, number];
 const FIN_INTRO_MS = RETRASO_PUERTA_MS + DURACION_PUERTA_MS + DURACION_ENTRADA_MS;
 
+/** Pieza redondeada: el radio nunca supera un tercio del lado más corto (muros finos incluidos). */
 function Caja({ posicion, tamano, color }: { posicion: Punto; tamano: Punto; color: string }) {
+  const radio = Math.min(0.07, Math.min(...tamano) / 3);
   return (
-    <mesh position={posicion}>
-      <boxGeometry args={tamano} />
-      <meshLambertMaterial color={color} />
-    </mesh>
+    <RoundedBox args={tamano} radius={radio} smoothness={3} position={posicion}>
+      <meshStandardMaterial color={color} roughness={0.6} />
+    </RoundedBox>
   );
 }
 
@@ -56,20 +58,20 @@ function Maceta({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
       <mesh position={[0, 0.23, 0]}>
-        <cylinderGeometry args={[0.28, 0.22, 0.42, 8]} />
-        <meshLambertMaterial color="#a96c55" />
+        <cylinderGeometry args={[0.28, 0.22, 0.42, 16]} />
+        <meshStandardMaterial color="#a96c55" roughness={0.6} />
       </mesh>
       <mesh position={[-0.13, 0.64, 0]} scale={[1, 1.25, 0.85]}>
         <sphereGeometry args={[0.23, 8, 6]} />
-        <meshLambertMaterial color="#467d60" />
+        <meshStandardMaterial color="#467d60" />
       </mesh>
       <mesh position={[0.13, 0.76, -0.07]} scale={[1, 1.35, 0.85]}>
         <sphereGeometry args={[0.23, 8, 6]} />
-        <meshLambertMaterial color="#62966b" />
+        <meshStandardMaterial color="#62966b" />
       </mesh>
       <mesh position={[0, 0.98, 0.06]} scale={[0.9, 1.15, 0.85]}>
         <sphereGeometry args={[0.2, 8, 6]} />
-        <meshLambertMaterial color="#467d60" />
+        <meshStandardMaterial color="#467d60" />
       </mesh>
     </group>
   );
@@ -78,17 +80,18 @@ function Maceta({ x, z }: { x: number; z: number }) {
 function Escenario() {
   return (
     <>
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[2, 4, 3]} intensity={0.5} />
+      {/* Luz de cielo fría abajo y cálida arriba, más una llave cálida: sin sombras calculadas. */}
+      <hemisphereLight args={["#fff1dc", "#6b4a5e", 1.2]} />
+      <directionalLight position={[2, 4, 3]} intensity={0.8} color="#ffe2b8" />
       {/* Pasillo estrecho: la abertura deja ver el interior cálido desde la oscuridad. */}
       <Caja posicion={[0, -0.06, -6.4]} tamano={[4.2, 0.1, 5]} color="#14101c" />
       {/* El pasillo termina detrás de la cara posterior del muro (-4.05):
           antes llegaba a -3.9 y sus testas oscuras se veían sobre el muro crema. */}
       <Caja posicion={[-2.1, 1.5, -6.5]} tamano={[0.1, 3, 4.8]} color="#1e1726" />
       <Caja posicion={[2.1, 1.5, -6.5]} tamano={[0.1, 3, 4.8]} color="#1e1726" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -5.55]}>
-        <planeGeometry args={[1.45, 2.8]} />
-        <meshLambertMaterial color="#875a54" />
+      <mesh position={[0, 0.012, -5.55]}>
+        <cylinderGeometry args={[0.725, 0.725, 0.024, 28]} />
+        <meshStandardMaterial color="#875a54" roughness={0.6} />
       </mesh>
       <Maceta x={1.45} z={-5.7} />
       <mesh position={[0, 2.35, -8.3]}>
@@ -117,23 +120,25 @@ function Escenario() {
       <Caja posicion={[-4.9, 0.12, 0.5]} tamano={[0.12, 0.24, 8.8]} color="#ad745e" />
       <Caja posicion={[4.9, 0.12, 0.5]} tamano={[0.12, 0.24, 8.8]} color="#ad745e" />
       <Caja posicion={[0, 0.12, 4.87]} tamano={[9.8, 0.24, 0.12]} color="#ad745e" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -3.3]}>
-        <planeGeometry args={[1.3, 0.48]} />
-        <meshLambertMaterial color="#ad745e" />
+      <mesh position={[0, 0.012, -3.3]}>
+        <cylinderGeometry args={[0.65, 0.65, 0.024, 24]} />
+        <meshStandardMaterial color="#ad745e" roughness={0.6} />
       </mesh>
       <Maceta x={-4.25} z={-3.15} />
 
+      {/* Una sola pasada de sombras de contacto bajo muebles y paciente (frames=1). */}
+      <ContactShadows position={[0, 0.01, -0.5]} opacity={0.4} scale={9} width={9} height={9} blur={2.2} far={2.5} frames={1} resolution={512} />
       <Sombra x={0} z={-0.45} radio={1.6} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, -0.45]}>
-        <circleGeometry args={[1.48, 32]} />
-        <meshLambertMaterial color="#bd7180" />
+      <mesh position={[0, 0.02, -0.45]}>
+        <cylinderGeometry args={[1.48, 1.48, 0.03, 40]} />
+        <meshStandardMaterial color="#bd7180" roughness={0.6} />
       </mesh>
       {/* Una única luminaria puntual, sin sombras calculadas. */}
       <pointLight position={[0, 2.45, -0.7]} intensity={1} distance={6} decay={2} color="#ffd9a0" />
       <Caja posicion={[0, 2.8, -0.7]} tamano={[0.035, 0.42, 0.035]} color="#493448" />
       <mesh position={[0, 2.56, -0.7]}>
         <coneGeometry args={[0.37, 0.35, 12, 1, true]} />
-        <meshLambertMaterial color="#e6a36a" emissive="#ffd9a0" emissiveIntensity={0.5} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#e6a36a" emissive="#ffd9a0" emissiveIntensity={0.5} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Ventana sobre la pared derecha; la luz del piso es una mancha bakeada. */}
@@ -157,15 +162,15 @@ function Escenario() {
       ))}
       <mesh position={[-4.58, 1.69, -0.65]}>
         <cylinderGeometry args={[0.14, 0.1, 0.25, 8]} />
-        <meshLambertMaterial color="#a96c55" />
+        <meshStandardMaterial color="#a96c55" />
       </mesh>
       <mesh position={[-4.62, 1.88, -0.72]}>
         <sphereGeometry args={[0.14, 8, 6]} />
-        <meshLambertMaterial color="#467d60" />
+        <meshStandardMaterial color="#467d60" />
       </mesh>
       <mesh position={[-4.5, 1.91, -0.59]}>
         <sphereGeometry args={[0.12, 8, 6]} />
-        <meshLambertMaterial color="#62966b" />
+        <meshStandardMaterial color="#62966b" />
       </mesh>
       <Silla x={-2.5} color="#d57670" />
       <Silla x={2.5} color="#d9a455" />
@@ -173,7 +178,7 @@ function Escenario() {
       {/* Reloj discreto sobre el muro, lejos del marco de la puerta. */}
       <mesh position={[-3.55, 2.35, -3.875]}>
         <circleGeometry args={[0.26, 16]} />
-        <meshLambertMaterial color="#fff1dc" />
+        <meshStandardMaterial color="#fff1dc" />
       </mesh>
       <Caja posicion={[-3.55, 2.43, -3.83]} tamano={[0.025, 0.16, 0.02]} color="#493448" />
       <Caja posicion={[-3.48, 2.35, -3.83]} tamano={[0.14, 0.025, 0.02]} color="#493448" />
@@ -194,11 +199,11 @@ function Escenario() {
       <Caja posicion={[0.25, 0.78, 1.03]} tamano={[0.48, 0.045, 0.3]} color="#e0a15d" />
       <mesh position={[0.74, 0.82, 1.2]}>
         <cylinderGeometry args={[0.1, 0.1, 0.15, 10]} />
-        <meshLambertMaterial color="#f6e1c4" />
+        <meshStandardMaterial color="#f6e1c4" />
       </mesh>
       <mesh position={[3.2, 0.22, 0.9]}>
         <cylinderGeometry args={[0.25, 0.2, 0.44, 10]} />
-        <meshLambertMaterial color="#655c76" />
+        <meshStandardMaterial color="#655c76" />
       </mesh>
     </>
   );
@@ -208,12 +213,13 @@ type PropsHabitacion = {
   alListo: () => void;
   listo: boolean;
   semillaPaciente?: string;
+  nombrePaciente?: string;
   saliendoPaciente?: boolean;
   salidaPaciente?: SalidaPaciente | null;
   alLlegarPaciente?: () => void;
 };
 
-function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsHabitacion) {
+function Habitacion({ alListo, listo, semillaPaciente, nombrePaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsHabitacion) {
   const { camera } = useThree();
   const bisagra = useRef<THREE.Group>(null);
   const inicio = useRef<number | null>(null);
@@ -244,6 +250,7 @@ function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, salidaP
         <Paciente
           key={semillaPaciente}
           seed={semillaPaciente}
+          nombre={nombrePaciente ?? ""}
           saliendo={!!saliendoPaciente}
           salida={salidaPaciente ?? "puerta"}
           alLlegar={alLlegarPaciente}
@@ -254,11 +261,11 @@ function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, salidaP
       <group ref={bisagra} position={[-0.7, 0, -3.95]}>
         <mesh position={[0.7, 1.3, 0]}>
           <boxGeometry args={[1.4, 2.6, 0.04]} />
-          <meshLambertMaterial color="#2ec4b6" side={THREE.DoubleSide} />
+          <meshStandardMaterial color="#2ec4b6" side={THREE.DoubleSide} />
         </mesh>
         <mesh position={[1.22, 1.2, 0.075]}>
           <sphereGeometry args={[0.075, 8, 6]} />
-          <meshLambertMaterial color="#f3d1a0" />
+          <meshStandardMaterial color="#f3d1a0" />
         </mesh>
       </group>
     </>
@@ -268,13 +275,14 @@ function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, salidaP
 type PropsConsultorio3D = {
   alListo?: () => void;
   semillaPaciente?: string;
+  nombrePaciente?: string;
   saliendoPaciente?: boolean;
   salidaPaciente?: SalidaPaciente | null;
   alLlegarPaciente?: () => void;
 };
 
 /** Decorado de consultorio en primera persona; vuelve al SVG si falta WebGL. */
-export default function Consultorio3D({ alListo, semillaPaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsConsultorio3D) {
+export default function Consultorio3D({ alListo, semillaPaciente, nombrePaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsConsultorio3D) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [listo, setListo] = useState(false);
@@ -332,7 +340,7 @@ export default function Consultorio3D({ alListo, semillaPaciente, saliendoPacien
     >
       <Canvas
         dpr={[1, 1.5]}
-        gl={{ antialias: false }}
+        gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping }}
         shadows={false}
         camera={{ position: [0, 1.6, -5.4], fov: 68 }}
         frameloop={visible ? (animando ? "always" : "demand") : "never"}
@@ -341,6 +349,7 @@ export default function Consultorio3D({ alListo, semillaPaciente, saliendoPacien
           alListo={avisar}
           listo={listo}
           semillaPaciente={semillaPaciente}
+          nombrePaciente={nombrePaciente}
           saliendoPaciente={saliendoPaciente}
           salidaPaciente={salidaPaciente}
           alLlegarPaciente={avisarLlegada}

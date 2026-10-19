@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { NOMBRES } from "./pacientes";
 import {
   debeAvisarLlegada,
+  EDADES,
+  edadPaciente,
+  escalaPaciente,
+  encorvamientoPaciente,
+  formaPaciente,
+  generoPaciente,
+  identidadPaciente,
+  ritmoPaciente,
   DURACION_ENTRADA_MS,
   DURACION_SALIDA_MS,
   fasePaciente,
@@ -149,13 +158,67 @@ describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => 
     }
   });
 
-  it("alcanza todos los peinados, tonos de pelo y atuendos con semillas distintas", () => {
-    const aspectos = Array.from({ length: 100 }, (_, i) => derivarAspecto(`paciente-${i}`));
-    expect(new Set(aspectos.map(({ pelo }) => pelo))).toEqual(new Set(["corto", "largo", "rizado"]));
-    expect(new Set(aspectos.map(({ colorPelo }) => colorPelo)).size).toBe(3);
-    expect(new Set(aspectos.map(({ atuendo }) => atuendo))).toEqual(new Set(["camisa", "bata", "chaleco"]));
-    expect(new Set(aspectos.map(({ altura }) => altura)).size).toBeGreaterThan(1);
-    expect(new Set(aspectos.map(({ contextura }) => contextura)).size).toBeGreaterThan(1);
+  it("cada nombre de NOMBRES tiene género; solo las diez nombres femeninas son mujer", () => {
+    const mujeres = ["Yaoska", "Darling", "Xiomara", "Scarleth", "Ligia", "Jazmina", "Karelia", "Melba", "Ivania", "Lucía"];
+    expect(NOMBRES.length).toBe(20);
+    for (const nombre of NOMBRES) {
+      expect(generoPaciente(`${nombre} Cruz`)).toBe(mujeres.includes(nombre) ? "mujer" : "hombre");
+    }
+    expect(mujeres.every((n) => NOMBRES.includes(n as never))).toBe(true);
+  });
+
+  it("el género depende solo del primer nombre y es determinista", () => {
+    expect(generoPaciente("Lucía Mendoza")).toBe("mujer");
+    expect(generoPaciente("Lucía Mendoza")).toBe(generoPaciente("Lucía Mendoza"));
+    expect(generoPaciente("Marlon Ruiz")).toBe("hombre");
+  });
+
+  it("la edad es determinista por semilla y cubre los cuatro tramos", () => {
+    expect(edadPaciente("ronda-1:0")).toBe(edadPaciente("ronda-1:0"));
+    const edades = Array.from({ length: 400 }, (_, i) => edadPaciente(`ronda-${i}:${i % 10}`));
+    for (const edad of ["nino", "joven", "adulto", "mayor"]) {
+      expect(edades.filter((e) => e === edad).length).toBeGreaterThan(40);
+    }
+  });
+
+  it("identidad combina género por nombre y edad por semilla", () => {
+    expect(identidadPaciente("Ligia Rizo", "s:1")).toEqual({ genero: "mujer", edad: edadPaciente("s:1") });
+    expect(identidadPaciente("Engel Rizo", "s:1")).toEqual({ genero: "hombre", edad: edadPaciente("s:1") });
+  });
+
+  it("la forma sigue al género y la edad: falda solo en mujeres, bastón y gafas solo en mayores", () => {
+    for (let i = 0; i < 60; i++) {
+      const seed = `forma-${i}`;
+      for (const edad of EDADES) {
+        const mujer = formaPaciente(seed, "mujer", edad);
+        const hombre = formaPaciente(seed, "hombre", edad);
+        expect(mujer.falda).toBe(true);
+        expect(hombre.falda).toBe(false);
+        expect(["corto", "calvo"]).toContain(hombre.peinado);
+        expect(mujer.barba).toBe(false);
+        expect(edad === "mayor" ? mujer.gafas && hombre.gafas : !mujer.gafas && !hombre.gafas).toBe(true);
+        expect(edad === "mayor" ? mujer.baston && hombre.baston : !mujer.baston).toBe(true);
+      }
+    }
+  });
+
+  it("los mayores tienen pelo canoso y los niños no llevan barba", () => {
+    for (let i = 0; i < 60; i++) {
+      const seed = `canas-${i}`;
+      expect(["#bdbab4", "#d4d0c8", "#a9a7a3"]).toContain(formaPaciente(seed, "mujer", "mayor").colorPelo);
+      expect(formaPaciente(seed, "hombre", "nino").barba).toBe(false);
+      expect(formaPaciente(seed, "hombre", "joven").barba).toBe(false);
+    }
+  });
+
+  it("niños: escala de ~0,75 y paso más vivo; mayores: encorvados y más lentos", () => {
+    const altura = 1.56;
+    expect(escalaPaciente("nino", altura)).toBeCloseTo(0.74, 2);
+    expect(escalaPaciente("adulto", altura)).toBeCloseTo(1, 2);
+    expect(ritmoPaciente("mayor")).toBeLessThan(ritmoPaciente("adulto"));
+    expect(ritmoPaciente("nino")).toBeGreaterThan(ritmoPaciente("adulto"));
+    expect(encorvamientoPaciente("mayor")).toBeGreaterThan(0);
+    expect(encorvamientoPaciente("adulto")).toBe(0);
   });
 
   it("el estado de infección no entra en el aspecto: solo se proporciona la semilla", () => {
