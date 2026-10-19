@@ -41,14 +41,32 @@ function Fila({ f, estimacionTexto }: { f: FilaPaciente; estimacionTexto: (pct: 
 }
 
 export function PuntajeResumen({ total, infectadosEnRonda, filas, estimacionTexto }: Props) {
+  const esPuntajeAlto = filas.length === 10 && total >= 8;
+  const aislamientosAcertados = filas.filter((f) => f.decisionAcertada && f.decision === "aislar").length;
+  const liberacionesAcertadas = filas.filter((f) => f.decisionAcertada && f.decision === "liberar").length;
+
   return (
     <Card className="flex flex-col gap-4">
-      <CardTitle>Tu puntaje</CardTitle>
-      <div className="text-center">
-        <p className="font-display text-6xl font-bold tabular-nums">{total}</p>
-        <p className="text-muted">
-          aciertos de {filas.length} · {infectadosEnRonda} de {filas.length} pacientes estaban infectados
+      <CardTitle>Resultado de la ronda</CardTitle>
+      <div className={`rounded-xl p-5 text-center sm:p-8 ${esPuntajeAlto ? "bg-success/10" : "bg-surface-2"}`}>
+        <p className="font-display text-2xl font-bold sm:text-3xl">
+          {esPuntajeAlto ? (total === 10 ? "¡Ronda perfecta!" : "¡Gran diagnóstico!") : "Cada decisión cuenta"}
         </p>
+        <p className="mt-3 font-display text-7xl font-bold tabular-nums sm:text-8xl">
+          {total}<span className="text-3xl text-muted sm:text-4xl"> / {filas.length}</span>
+        </p>
+        <p className="mt-2 font-semibold">decisiones acertadas</p>
+        <div className="mt-5 grid grid-cols-2 gap-3 text-left">
+          <div className="rounded-lg bg-surface p-3">
+            <p className="font-display text-2xl font-bold tabular-nums">{aislamientosAcertados}</p>
+            <p className="text-sm">aislamientos acertados</p>
+          </div>
+          <div className="rounded-lg bg-surface p-3">
+            <p className="font-display text-2xl font-bold tabular-nums">{liberacionesAcertadas}</p>
+            <p className="text-sm">liberaciones acertadas</p>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-muted">{infectadosEnRonda} de {filas.length} pacientes estaban infectados</p>
       </div>
       <h3 className="font-semibold">Paciente por paciente</h3>
       <ul className="flex flex-col gap-2">

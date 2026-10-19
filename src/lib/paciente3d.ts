@@ -7,22 +7,43 @@ const DURACION_FUNDIDO_MS = 400;
 const CAMISAS = ["#72959b", "#ad837f", "#8c91ac", "#9a9471", "#8b789b"] as const;
 const PANTALONES = ["#514d6b", "#454e5d", "#5b514b", "#454f4b"] as const;
 const PIELES = ["#d9b995", "#b98e73", "#e5c4aa", "#a87966"] as const;
+const PEINADOS = ["corto", "largo", "rizado"] as const;
+const COLORES_PELO = ["#393531", "#655044", "#817366"] as const;
+const ATUENDOS = ["camisa", "bata", "chaleco"] as const;
 
-/** La semilla del avatar determina la ropa y piel; nunca el estado de infección (S11). */
-export function coloresPaciente(seed: string) {
+function hashSemilla(seed: string): number {
   let hash = 2166136261;
   for (let i = 0; i < seed.length; i++) {
     hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
   }
-  const indice = (sal: number, largo: number) => {
-    let valor = Math.imul(hash ^ sal, 0x45d9f3b);
-    valor = Math.imul(valor ^ (valor >>> 16), 0x45d9f3b);
-    return ((valor ^ (valor >>> 16)) >>> 0) % largo;
-  };
+  return hash;
+}
+
+function indiceSemilla(hash: number, sal: number, largo: number): number {
+  let valor = Math.imul(hash ^ sal, 0x45d9f3b);
+  valor = Math.imul(valor ^ (valor >>> 16), 0x45d9f3b);
+  return ((valor ^ (valor >>> 16)) >>> 0) % largo;
+}
+
+/** La semilla del avatar determina la ropa y piel; nunca el estado de infección (S11). */
+export function coloresPaciente(seed: string) {
+  const hash = hashSemilla(seed);
   return {
-    camisa: CAMISAS[indice(1, CAMISAS.length)],
-    pantalon: PANTALONES[indice(2, PANTALONES.length)],
-    piel: PIELES[indice(3, PIELES.length)],
+    camisa: CAMISAS[indiceSemilla(hash, 1, CAMISAS.length)],
+    pantalon: PANTALONES[indiceSemilla(hash, 2, PANTALONES.length)],
+    piel: PIELES[indiceSemilla(hash, 3, PIELES.length)],
+  };
+}
+
+/** S11: la semilla es independiente de estaba_infectado; la variedad no da pistas de infección. */
+export function derivarAspecto(seed: string) {
+  const hash = hashSemilla(seed);
+  return {
+    altura: (135 + indiceSemilla(hash, 4, 36)) / 100,
+    contextura: (85 + indiceSemilla(hash, 5, 36)) / 100,
+    pelo: PEINADOS[indiceSemilla(hash, 6, PEINADOS.length)],
+    colorPelo: COLORES_PELO[indiceSemilla(hash, 7, COLORES_PELO.length)],
+    atuendo: ATUENDOS[indiceSemilla(hash, 8, ATUENDOS.length)],
   };
 }
 

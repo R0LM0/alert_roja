@@ -274,12 +274,23 @@ export default function Consultorio3D({ alListo, semillaPaciente, saliendoPacien
   const [reducido, setReducido] = useState(false);
   const notificado = useRef(false);
   const montado = useRef<number | null>(null);
+  const [llegoPaciente, setLlegoPaciente] = useState(false);
   const avisar = useCallback(() => {
     if (notificado.current) return;
     notificado.current = true;
     setListo(true);
     alListo?.();
   }, [alListo]);
+
+  // El paciente camina solo al entrar y al salir; sentado está quieto.
+  useEffect(() => {
+    setLlegoPaciente(false);
+  }, [semillaPaciente]);
+  const avisarLlegada = useCallback(() => {
+    setLlegoPaciente(true);
+    alLlegarPaciente?.();
+  }, [alLlegarPaciente]);
+  const animando = !reducido && (!listo || !llegoPaciente || !!saliendoPaciente);
 
   useEffect(() => {
     montado.current = performance.now();
@@ -317,14 +328,14 @@ export default function Consultorio3D({ alListo, semillaPaciente, saliendoPacien
         gl={{ antialias: false }}
         shadows={false}
         camera={{ position: [0, 1.6, -5.4], fov: 68 }}
-        frameloop={visible ? (listo && reducido ? "demand" : "always") : "never"}
+        frameloop={visible ? (animando ? "always" : "demand") : "never"}
       >
         <Habitacion
           alListo={avisar}
           listo={listo}
           semillaPaciente={semillaPaciente}
           saliendoPaciente={saliendoPaciente}
-          alLlegarPaciente={alLlegarPaciente}
+          alLlegarPaciente={avisarLlegada}
         />
       </Canvas>
     </div>

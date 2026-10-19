@@ -105,36 +105,31 @@ describe("puntajePartida", () => {
 
 describe("insignias", () => {
   const diez = (est: number | null, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
-  it("bayesiano-nato con promedio en [25, 40]", () => {
-    expect(insignias([...diez(25, "aislar").slice(0, 5), ...diez(40, "liberar").slice(0, 5)], PREVALENCIA)).toContain(
-      "bayesiano-nato",
-    );
+  it("bayesiano-nato con promedio en [25, 40] solo cuando hay estimaciones", () => {
+    const soloSanos = diez(null, "liberar");
+    expect(insignias(soloSanos)).toEqual(["perfecto"]);
+    expect(insignias([...soloSanos.slice(0, 9), mk(33, "liberar", false)])).toEqual(["perfecto", "bayesiano-nato"]);
   });
-  it("no concede insignia de estimación sin estimaciones, ni mezcla null como cero", () => {
-    expect(insignias(diez(null, "aislar"))).toEqual(["paranoico"]);
-    expect(insignias([...diez(null, "aislar").slice(0, 9), mk(33, "liberar", false)])).toEqual(["bayesiano-nato"]);
+  it("cazador requiere infectados y haber aislado a todos", () => {
+    const conInfectados = [mk(null, "aislar", true), mk(null, "aislar", true), ...diez(null, "liberar").slice(0, 8)];
+    expect(insignias(conInfectados)).toEqual(["perfecto", "cazador"]);
+    expect(insignias(diez(null, "liberar"))).toEqual(["perfecto"]);
+    const sieteAciertos = [...conInfectados.slice(0, 2), ...diez(null, "aislar").slice(0, 3), ...diez(null, "liberar").slice(0, 5)];
+    expect(insignias(sieteAciertos)).toEqual(["cazador"]);
+    expect(insignias([{ ...conInfectados[0], decision: "liberar" }, ...conInfectados.slice(1)])).not.toContain("cazador");
   });
-  it("paranoico si aísla a los 10", () => {
-    expect(insignias(diez(90, "aislar"), PREVALENCIA)).toEqual(["paranoico"]);
+  it("ojo clínico solo con 8-9 aciertos de diez, perfecto solo con diez", () => {
+    const todos = diez(null, "liberar");
+    expect(insignias([{ ...todos[0], decision: "aislar" }, ...todos.slice(1)])).toEqual(["ojo-clinico"]);
+    expect(insignias([...diez(null, "aislar").slice(0, 3), ...todos.slice(3)])).toEqual([]);
+    expect(insignias(todos.slice(0, 9))).toEqual([]);
+    expect(insignias([])).toEqual([]);
   });
-  it("confiado si libera a los 10", () => {
-    expect(insignias(diez(90, "liberar"), PREVALENCIA)).toEqual(["confiado"]);
-  });
-  it("los límites 25 y 40 del promedio son inclusivos; justo afuera no", () => {
-    const mixto = (est: number) => diez(est, "aislar").map((r, i) => ({ ...r, decision: i % 2 ? ("liberar" as const) : r.decision }));
-    expect(insignias(mixto(25), PREVALENCIA)).toEqual(["bayesiano-nato"]);
-    expect(insignias(mixto(40), PREVALENCIA)).toEqual(["bayesiano-nato"]);
-    expect(insignias(mixto(24), PREVALENCIA)).toEqual([]);
-    expect(insignias(mixto(41), PREVALENCIA)).toEqual([]);
-  });
-  it("puede combinar bayesiano-nato con paranoico", () => {
-    expect(insignias(diez(30, "aislar"), PREVALENCIA)).toEqual(["bayesiano-nato", "paranoico"]);
-  });
-  it("paranoico y confiado exigen la ronda completa; sin respuestas no hay insignias", () => {
-    expect(insignias(diez(90, "aislar").slice(0, 9), PREVALENCIA)).toEqual([]);
-    expect(insignias([], PREVALENCIA)).toEqual([]);
-  });
-  it("ninguna si no cumple nada", () => {
-    expect(insignias([...diez(90, "aislar").slice(0, 5), ...diez(90, "liberar").slice(0, 5)], PREVALENCIA)).toEqual([]);
+  it("los límites 25 y 40 del promedio legacy son inclusivos; justo afuera no", () => {
+    const conEstimacion = (est: number) => diez(est, "liberar");
+    expect(insignias(conEstimacion(25))).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(40))).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(24))).toEqual(["perfecto"]);
+    expect(insignias(conEstimacion(41))).toEqual(["perfecto"]);
   });
 });

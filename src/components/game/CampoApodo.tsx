@@ -20,6 +20,12 @@ export function CampoApodo() {
 
   useEffect(() => () => clearTimeout(salida.current), []);
 
+  // Precarga el chunk 3D mientras el jugador escribe el apodo: al dar Start
+  // la escena ya está en caché y no se esperan ~3 s de red (S10). Sin nuevas deps.
+  useEffect(() => {
+    void import("@/components/game/consultorio3d/Consultorio3D");
+  }, []);
+
   useEffect(() => {
     setApodo(apodoRecordado());
   }, []);

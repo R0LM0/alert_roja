@@ -7,6 +7,7 @@ import {
   anguloSalida,
   alphaEntrada,
   coloresPaciente,
+  derivarAspecto,
   pasoWalk,
   posPaciente,
 } from "./paciente3d";
@@ -83,6 +84,33 @@ describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => 
     expect(alphaEntrada(400)).toBe(1);
     expect(alphaEntrada(DURACION_ENTRADA_MS)).toBe(1);
     expect(alphaEntrada(0, true)).toBe(1);
+  });
+
+  it("deriva el mismo aspecto para la misma semilla y proporciones dentro de los límites", () => {
+    const aspecto = derivarAspecto("paciente-1");
+    expect(derivarAspecto("paciente-1")).toEqual(aspecto);
+    for (let i = 0; i < 100; i++) {
+      const { altura, contextura } = derivarAspecto(`paciente-${i}`);
+      expect(altura).toBeGreaterThanOrEqual(1.35);
+      expect(altura).toBeLessThanOrEqual(1.7);
+      expect(contextura).toBeGreaterThanOrEqual(0.85);
+      expect(contextura).toBeLessThanOrEqual(1.2);
+    }
+  });
+
+  it("alcanza todos los peinados, tonos de pelo y atuendos con semillas distintas", () => {
+    const aspectos = Array.from({ length: 100 }, (_, i) => derivarAspecto(`paciente-${i}`));
+    expect(new Set(aspectos.map(({ pelo }) => pelo))).toEqual(new Set(["corto", "largo", "rizado"]));
+    expect(new Set(aspectos.map(({ colorPelo }) => colorPelo)).size).toBe(3);
+    expect(new Set(aspectos.map(({ atuendo }) => atuendo))).toEqual(new Set(["camisa", "bata", "chaleco"]));
+    expect(new Set(aspectos.map(({ altura }) => altura)).size).toBeGreaterThan(1);
+    expect(new Set(aspectos.map(({ contextura }) => contextura)).size).toBeGreaterThan(1);
+  });
+
+  it("el estado de infección no entra en el aspecto: solo se proporciona la semilla", () => {
+    const seed = "paciente-neutral";
+    const aspectos = [false, true].map(() => derivarAspecto(seed));
+    expect(aspectos[0]).toEqual(aspectos[1]);
   });
 
   it("elige atuendo y piel deterministas por seed con variantes visibles", () => {

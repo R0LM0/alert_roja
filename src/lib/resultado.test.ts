@@ -55,26 +55,49 @@ describe("calcularResultado", () => {
     expect(calcularResultado(entrada({ puntajeServidor: 5 })).puntajeTotal).toBe(10);
   });
 
-  it("insignias con metadatos", () => {
-    const r = calcularResultado(entrada());
-    expect(r.insignias.map((i) => i.id)).toEqual(["bayesiano-nato"]);
-    expect(r.insignias[0].titulo).toBe("Bayesiano nato");
-    const par = calcularResultado(
-      entrada({ respuestas: entrada().respuestas.map((x) => ({ ...x, decision: "aislar" as const })) }),
-    );
-    expect(par.insignias.map((i) => i.titulo)).toContain("Paranoico");
-    const conf = calcularResultado(
-      entrada({ respuestas: entrada().respuestas.map((x) => ({ ...x, decision: "liberar" as const })) }),
-    );
-    expect(conf.insignias.map((i) => i.titulo)).toContain("Confiado");
+  it("10/10 sin estimaciones gana perfecto y cazador si aisló a todos los infectados", () => {
+    const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    const r = calcularResultado(nueva);
+    expect(r.insignias.map((i) => i.id)).toEqual(["perfecto", "cazador"]);
+    expect(r.insignias[0].titulo).toBe("Ronda perfecta");
+    expect(r.insignias.some((i) => i.id === "bayesiano-nato")).toBe(false);
   });
 
-  it("puntaje alto desde el umbral", () => {
+  it("8 o 9 aciertos ganan ojo clínico, pero 7 no gana insignias de puntaje", () => {
+    const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    const conErrores = (n: number) => calcularResultado({
+      ...nueva,
+      respuestas: nueva.respuestas.map((r, i) => i < n ? { ...r, decision: r.decision === "aislar" ? "liberar" as const : "aislar" as const } : r),
+    });
+    expect(conErrores(1).insignias.map((i) => i.id)).toContain("ojo-clinico");
+    expect(conErrores(2).insignias.map((i) => i.id)).toContain("ojo-clinico");
+    expect(conErrores(3).insignias.map((i) => i.id)).toEqual([]);
+  });
+
+  it("filas legacy conservan su insignia de estimación junto a las nuevas", () => {
+    expect(calcularResultado(entrada()).insignias.map((i) => i.id)).toEqual(["perfecto", "cazador", "bayesiano-nato"]);
+    const sinEstimaciones = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    expect(calcularResultado(sinEstimaciones).estimacionPromedioPct).toBeNull();
+  });
+
+  it("ronda vacía no gana insignias ni se celebra como puntaje alto", () => {
+    const r = calcularResultado(entrada({ ronda: [], respuestas: [] }));
+    expect(r.insignias).toEqual([]);
+    expect(r.esPuntajeAlto).toBe(false);
+  });
+
+  it("puntaje alto comienza en 8 de 10 aciertos", () => {
     expect(puntajeMaximo()).toBe(10);
-    expect(UMBRAL_PUNTAJE_ALTO).toBe(0.75);
+    expect(UMBRAL_PUNTAJE_ALTO).toBe(0.8);
     const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     expect(calcularResultado({ ...nueva, puntajeServidor: 8 }).esPuntajeAlto).toBe(true);
     expect(calcularResultado({ ...nueva, puntajeServidor: 7 }).esPuntajeAlto).toBe(false);
+    const conErrores = (n: number) => calcularResultado({
+      ...nueva,
+      respuestas: nueva.respuestas.map((r, i) => i < n ? { ...r, decision: "liberar" as const } : r),
+    });
+    expect(conErrores(2).esPuntajeAlto).toBe(true);
+    expect(conErrores(3).esPuntajeAlto).toBe(false);
   });
 
   it("mensaje clave normal y experto calculados", () => {

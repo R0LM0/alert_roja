@@ -110,16 +110,23 @@ export function puntajePartida(rs: Respuesta[], _prev = PREVALENCIA): number {
   return rs.filter(decisionAcertada).length;
 }
 
-export type Insignia = "bayesiano-nato" | "paranoico" | "confiado";
+export type Insignia = "perfecto" | "ojo-clinico" | "cazador" | "bayesiano-nato";
 
-/** Insignias ganadas en una partida completa (10 pacientes). */
+/** Insignias de decisión para rondas completas; la de estimación sobrevive solo en filas legacy. */
 export function insignias(rs: Respuesta[], _prev = PREVALENCIA): Insignia[] {
   if (rs.length === 0) return [];
   const out: Insignia[] = [];
+  if (rs.length === PACIENTES_POR_RONDA) {
+    const aciertos = puntajePartida(rs);
+    if (aciertos === PACIENTES_POR_RONDA) out.push("perfecto");
+    else if (aciertos >= 8) out.push("ojo-clinico");
+    const infectados = rs.filter((r) => r.estaba_infectado);
+    if (infectados.length > 0 && infectados.every((r) => r.decision === "aislar")) out.push("cazador");
+  }
   const estimaciones = rs.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
-  const promedio = estimaciones.reduce((a, e) => a + e, 0) / estimaciones.length;
-  if (estimaciones.length && promedio >= 25 && promedio <= 40) out.push("bayesiano-nato");
-  if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "aislar")) out.push("paranoico");
-  if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "liberar")) out.push("confiado");
+  if (estimaciones.length) {
+    const promedio = estimaciones.reduce((a, e) => a + e, 0) / estimaciones.length;
+    if (promedio >= 25 && promedio <= 40) out.push("bayesiano-nato");
+  }
   return out;
 }

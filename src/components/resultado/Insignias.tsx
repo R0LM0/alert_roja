@@ -1,8 +1,8 @@
-import { Brain, ShieldAlert, Smile, type LucideIcon } from "lucide-react";
+import { Brain, ShieldCheck, Smile, type LucideIcon } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { InsigniaInfo } from "@/lib/resultado";
 
-const ICONOS: Record<InsigniaInfo["icono"], LucideIcon> = { brain: Brain, "shield-alert": ShieldAlert, smile: Smile };
+const ICONOS: Record<InsigniaInfo["icono"], LucideIcon> = { brain: Brain, "shield-check": ShieldCheck, smile: Smile };
 
 export function Insignias({ insignias }: { insignias: InsigniaInfo[] }) {
   return (

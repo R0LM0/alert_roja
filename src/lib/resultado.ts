@@ -13,34 +13,40 @@ import {
   type Respuesta,
 } from "./stats";
 
-/** Fracción del puntaje máximo posible desde la que se festeja. */
-export const UMBRAL_PUNTAJE_ALTO = 0.75;
+/** Fracción del puntaje máximo posible desde la que se festeja (8 aciertos de 10). */
+export const UMBRAL_PUNTAJE_ALTO = 0.8;
 
 /** Máximo posible: una decisión acertada por paciente. */
 export function puntajeMaximo(): number {
   return PACIENTES_POR_RONDA;
 }
 
-export type InsigniaInfo = { id: Insignia; titulo: string; descripcion: string; icono: "brain" | "shield-alert" | "smile" };
+export type InsigniaInfo = { id: Insignia; titulo: string; descripcion: string; icono: "brain" | "shield-check" | "smile" };
 
 const INSIGNIAS: Record<Insignia, InsigniaInfo> = {
+  perfecto: {
+    id: "perfecto",
+    titulo: "Ronda perfecta",
+    descripcion: "Acertaste las 10 decisiones de la ronda.",
+    icono: "smile",
+  },
+  "ojo-clinico": {
+    id: "ojo-clinico",
+    titulo: "Ojo clínico",
+    descripcion: "Acertaste 8 o 9 decisiones de la ronda.",
+    icono: "brain",
+  },
+  cazador: {
+    id: "cazador",
+    titulo: "Cazador de contagios",
+    descripcion: "Aislaste a todos los pacientes infectados de esta ronda.",
+    icono: "shield-check",
+  },
   "bayesiano-nato": {
     id: "bayesiano-nato",
     titulo: "Bayesiano nato",
     descripcion: "Tu estimación promedio quedó entre 25 % y 40 %, cerca de la realidad.",
     icono: "brain",
-  },
-  paranoico: {
-    id: "paranoico",
-    titulo: "Paranoico",
-    descripcion: "Aislaste a los 10 pacientes, sin excepción.",
-    icono: "shield-alert",
-  },
-  confiado: {
-    id: "confiado",
-    titulo: "Confiado",
-    descripcion: "Liberaste a los 10 pacientes, sin excepción.",
-    icono: "smile",
   },
 };
 
