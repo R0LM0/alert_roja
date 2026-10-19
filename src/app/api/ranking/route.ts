@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorJson, leerPrevalencia, logError } from "@/lib/api";
 import { sql } from "@/lib/db";
+import { INICIO_TEMPORADA_ACTUAL } from "@/lib/ranking";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export async function GET(req: Request) {
       select jugador, puntaje, prevalencia, creada_en, tiempo_total_ms
       from partidas
       where primer_intento and (${prev}::numeric is null or prevalencia = ${prev}::numeric)
+        and creada_en >= ${INICIO_TEMPORADA_ACTUAL}::timestamptz
       order by puntaje desc, tiempo_total_ms asc nulls last, creada_en asc
       limit 10
     `;

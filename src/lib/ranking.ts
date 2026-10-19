@@ -1,5 +1,13 @@
 /** Regla del ranking: solo el primer intento por apodo y dificultad; desempate por menor tiempo total. */
 
+export const INICIO_TEMPORADA_ACTUAL = "2026-10-19T00:00:00.000Z";
+export const NOMBRE_TEMPORADA_ACTUAL = "Decisiones";
+export const ETIQUETA_TEMPORADA_ACTUAL = "Temporada actual: decisiones (desde el 19/10/2026). Las partidas anteriores quedan archivadas.";
+
+export function enTemporadaActual(creadaEn: string): boolean {
+  return Date.parse(creadaEn) >= Date.parse(INICIO_TEMPORADA_ACTUAL);
+}
+
 /** Apodo comparable: sin espacios en los bordes y sin distinguir mayúsculas (igual que lower(btrim()) en SQL). */
 export function normalizarApodo(apodo: string): string {
   return apodo.trim().toLowerCase();

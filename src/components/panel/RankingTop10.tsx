@@ -1,7 +1,7 @@
 import { Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { EntradaRanking } from "@/lib/panel";
-import { formatearTiempoTotal } from "@/lib/ranking";
+import { ETIQUETA_TEMPORADA_ACTUAL, formatearTiempoTotal } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
 
 type Props = { ranking: EntradaRanking[] | undefined };
@@ -26,6 +26,7 @@ export function RankingTop10({ ranking }: Props) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6">
       <h2 className="font-display text-2xl sm:text-4xl font-bold">Top 10</h2>
+      <p className="text-sm text-muted">{ETIQUETA_TEMPORADA_ACTUAL}</p>
       {ranking === undefined ? (
         <p className="text-lg text-muted sm:text-2xl">Cargando ranking…</p>
       ) : ranking.length === 0 ? (

@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { compararRanking, construirHistograma, formatearTiempoTotal, normalizarApodo, seleccionarPrimerosIntentos } from "./ranking";
+import {
+  compararRanking,
+  construirHistograma,
+  enTemporadaActual,
+  ETIQUETA_TEMPORADA_ACTUAL,
+  formatearTiempoTotal,
+  INICIO_TEMPORADA_ACTUAL,
+  NOMBRE_TEMPORADA_ACTUAL,
+  normalizarApodo,
+  seleccionarPrimerosIntentos,
+} from "./ranking";
+
+describe("temporada actual del ranking", () => {
+  it("define la temporada de decisiones y explica el archivo histórico", () => {
+    expect(INICIO_TEMPORADA_ACTUAL).toBe("2026-10-19T00:00:00.000Z");
+    expect(NOMBRE_TEMPORADA_ACTUAL).toBe("Decisiones");
+    expect(ETIQUETA_TEMPORADA_ACTUAL).toBe(
+      "Temporada actual: decisiones (desde el 19/10/2026). Las partidas anteriores quedan archivadas.",
+    );
+  });
+  it("excluye las partidas anteriores al inicio", () => {
+    expect(enTemporadaActual("2026-10-18T23:59:59.999Z")).toBe(false);
+  });
+  it("incluye el instante exacto de inicio", () => {
+    expect(enTemporadaActual("2026-10-19T00:00:00.000Z")).toBe(true);
+  });
+  it("incluye los instantes posteriores incluso con otra zona horaria", () => {
+    expect(enTemporadaActual("2026-10-18T21:00:00.001-03:00")).toBe(true);
+  });
+  it("excluye fechas inválidas", () => {
+    expect(enTemporadaActual("fecha inválida")).toBe(false);
+  });
+  it("mantiene el orden por puntaje aun entre partidas de distintas temporadas", () => {
+    const antigua = { puntaje: 100, tiempoTotalMs: 50_000, creadaEn: "2026-10-18T23:59:59.999Z" };
+    const actual = { puntaje: 10, tiempoTotalMs: 50_000, creadaEn: "2026-10-19T00:00:00.000Z" };
+    expect(compararRanking(antigua, actual)).toBeLessThan(0);
+  });
+});
 
 describe("formatearTiempoTotal", () => {
   it("formatea m:ss", () => {
