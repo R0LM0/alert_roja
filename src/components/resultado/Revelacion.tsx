@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { FaseCiudad } from "@/lib/ciudad-layout";
 import { festejar } from "@/lib/confeti";
+import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
 import { prevalenciaDeModo, type Modo } from "@/lib/ronda";
 import { calcularResultado } from "@/lib/resultado";
@@ -20,6 +21,7 @@ import { FormulaBayes } from "./FormulaBayes";
 import { Insignias } from "./Insignias";
 import { MensajeClave } from "./MensajeClave";
 import { PuntajeResumen } from "./PuntajeResumen";
+import { VeredictoCiudad } from "./VeredictoCiudad";
 
 /** Pausas de la secuencia: ver la ciudad mezclada, reagrupar y, al final, celebrar. */
 const RETARDO_TABLA_MS = 2200;
@@ -60,6 +62,9 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
   const esPuntajeAlto = calculo.esPuntajeAlto;
   const decisionesAcertadas = calculo.filas.filter((f) => f.decisionAcertada).length;
   const mayoriaAcertada = decisionesAcertadas * 2 >= calculo.filas.length;
+  // El festejo mira el destino de la ciudad, no solo el puntaje: con un infectado
+  // liberado la ciudad se contagia y celebrar contradiría el final.
+  const ciudadSalvada = calcularVeredicto(calculo.filas).estado === "salvada";
 
   // Secuencia de la revelación: ciudad -> tabla -> cierre (sonido + confeti).
   // Aquí la verdad ya es conocida por el jugador, por eso suenan acierto/error.
@@ -78,13 +83,13 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
       if (cerrada.current) return;
       cerrada.current = true;
       playRef.current(mayoriaAcertada ? "acierto" : "error");
-      if (esPuntajeAlto) festejar(); // no hace nada con movimiento reducido
+      if (esPuntajeAlto && ciudadSalvada) festejar(); // no hace nada con movimiento reducido
     }, reducido ? 400 : RETARDO_CIERRE_MS);
     return () => {
       clearTimeout(aTabla);
       clearTimeout(alCerrar);
     };
-  }, [esPuntajeAlto, mayoriaAcertada]);
+  }, [esPuntajeAlto, ciudadSalvada, mayoriaAcertada]);
 
   function jugar(destino: Modo) {
     limpiar();
@@ -98,10 +103,13 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
         <p className="text-muted">{modo === "experto" ? "Modo experto · prevalencia 1 %" : "Modo normal · prevalencia 10 %"}</p>
       </header>
       <Aparece orden={0}>
+        <VeredictoCiudad filas={calculo.filas} />
+      </Aparece>
+      <Aparece orden={1}>
         <CiudadSlot frecuencias={calculo.frecuencias} mensajeFrecuencias={pasos.texto.frecuencias} fase={fase} />
       </Aparece>
       {calculo.estimacionPromedioPct !== null ? (
-        <Aparece orden={1}>
+        <Aparece orden={2}>
           <ComparacionIntuicion
             intuicionPct={calculo.estimacionPromedioPct}
             realidadPct={calculo.vppTeoricoPct}
@@ -110,7 +118,7 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
           />
         </Aparece>
       ) : null}
-      <Aparece orden={2}>
+      <Aparece orden={3}>
         <PuntajeResumen
           total={calculo.puntajeTotal}
           infectadosEnRonda={calculo.infectadosEnRonda}
@@ -118,16 +126,16 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
           estimacionTexto={pctEntero}
         />
       </Aparece>
-      <Aparece orden={3}>
+      <Aparece orden={4}>
         <Insignias insignias={calculo.insignias} />
       </Aparece>
-      <Aparece orden={4}>
+      <Aparece orden={5}>
         <MensajeClave mensaje={calculo.mensajeClave} />
       </Aparece>
-      <Aparece orden={5}>
+      <Aparece orden={6}>
         <FormulaBayes pasos={pasos} />
       </Aparece>
-      <Aparece orden={6}>
+      <Aparece orden={7}>
         <AccionesResultado
           modo={modo}
           guardado={resultado.estado === "guardado"}
