@@ -18,6 +18,7 @@ import {
 } from "@/lib/consultorio3d";
 import { duracionEnsamblado } from "@/lib/consultorio-layout";
 import { POS_CUARENTENA, type SalidaPaciente } from "@/lib/paciente3d";
+import { Monitor } from "./Monitor";
 import { Paciente } from "./Paciente";
 
 type Punto = [number, number, number];
@@ -77,7 +78,7 @@ function Maceta({ x, z }: { x: number; z: number }) {
   );
 }
 
-function Escenario() {
+function Escenario({ nombre }: { nombre?: string }) {
   return (
     <>
       {/* Luz de cielo fría abajo y cálida arriba, más una llave cálida: sin sombras calculadas. */}
@@ -205,6 +206,8 @@ function Escenario() {
         <cylinderGeometry args={[0.25, 0.2, 0.44, 10]} />
         <meshStandardMaterial color="#655c76" />
       </mesh>
+      {/* Computadora del médico: el paciente queda a la izquierda de la pantalla. */}
+      <Monitor nombre={nombre} />
     </>
   );
 }
@@ -245,7 +248,7 @@ function Habitacion({ alListo, listo, semillaPaciente, nombrePaciente, saliendoP
 
   return (
     <>
-      <Escenario />
+      <Escenario nombre={nombrePaciente} />
       {listo && semillaPaciente && (
         <Paciente
           key={semillaPaciente}
