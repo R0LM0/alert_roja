@@ -78,8 +78,8 @@ describe("calcularResultado", () => {
   it("10/10 sin estimaciones gana perfecto y cazador si aisló a todos los infectados", () => {
     const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     const r = calcularResultado(nueva);
-    expect(r.insignias.map((i) => i.id)).toEqual(["perfecto", "cazador"]);
-    expect(r.insignias).toEqual(resolverInsignias(["perfecto", "cazador"]));
+    expect(r.insignias.map((i) => i.id)).toEqual(["perfecto", "cazador", "sin-panico"]);
+    expect(r.insignias).toEqual(resolverInsignias(["perfecto", "cazador", "sin-panico"]));
     expect(r.insignias[0].titulo).toBe("Ronda perfecta");
     expect(r.insignias.some((i) => i.id === "bayesiano-nato")).toBe(false);
   });
@@ -92,11 +92,12 @@ describe("calcularResultado", () => {
     });
     expect(conErrores(1).insignias.map((i) => i.id)).toContain("ojo-clinico");
     expect(conErrores(2).insignias.map((i) => i.id)).toContain("ojo-clinico");
-    expect(conErrores(3).insignias.map((i) => i.id)).toEqual([]);
+    expect(conErrores(3).insignias.map((i) => i.id)).not.toContain("ojo-clinico");
+    expect(conErrores(3).insignias.map((i) => i.id)).not.toContain("perfecto");
   });
 
   it("filas legacy conservan su insignia de estimación junto a las nuevas", () => {
-    expect(calcularResultado(entrada()).insignias.map((i) => i.id)).toEqual(["perfecto", "cazador", "bayesiano-nato"]);
+    expect(calcularResultado(entrada()).insignias.map((i) => i.id)).toEqual(["perfecto", "cazador", "sin-panico", "bayesiano-nato"]);
     const sinEstimaciones = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     expect(calcularResultado(sinEstimaciones).estimacionPromedioPct).toBeNull();
   });

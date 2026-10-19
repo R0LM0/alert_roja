@@ -10,7 +10,7 @@ import { festejar } from "@/lib/confeti";
 import { explicacionFrecuencias } from "@/lib/explicacion";
 import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
-import { resolverInsignias } from "@/lib/insignias";
+import { medallasInsignias, resolverInsignias } from "@/lib/insignias";
 import { prevalenciaDeModo, type Modo } from "@/lib/ronda";
 import { calcularResultado } from "@/lib/resultado";
 import { guardarInsignias, leerInsignias, leerResultado, limpiar, type InsigniaGuardada, type ResultadoJuego } from "@/lib/sesion-juego";
@@ -142,7 +142,7 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
         <RevisionPacientes filas={calculo.filas} />
       </Aparece>
       <Aparece orden={4}>
-        <Insignias insignias={calculo.insignias} />
+        <Insignias medallas={medallasInsignias(calculo.insignias.map((i) => i.id))} />
       </Aparece>
       {insigniasHistorial.length > 0 ? (
         <Aparece orden={4}>

@@ -119,20 +119,20 @@ describe("insignias", () => {
   it("premia 10 decisiones óptimas aunque no coincidan con la infección; cazador exige aislar infectados", () => {
     const rs = Array.from({ length: 10 }, () => mk(null, "liberar", true));
     const ronda = rs.map((_, i) => ({ orden: i + 1, evidencia: "protegido" as const }));
-    expect(insignias(rs, { modo: "normal", ronda })).toEqual(["perfecto"]);
-    expect(insignias(rs.map((r, i) => i < 2 ? { ...r, decision: "aislar" as const } : r), { modo: "normal", ronda })).toEqual(["ojo-clinico"]);
+    expect(insignias(rs, { modo: "normal", ronda })).toEqual(["perfecto", "sin-panico"]);
+    expect(insignias(rs.map((r, i) => i < 2 ? { ...r, decision: "aislar" as const } : r), { modo: "normal", ronda })).toEqual(["ojo-clinico", "sin-panico"]);
   });
   const diez = (est: number | null, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
   const protegidos = { modo: "normal" as const, ronda: Array.from({ length: 10 }, (_, i) => ({ orden: i + 1, evidencia: "protegido" as const })) };
   it("bayesiano-nato con promedio en [25, 40] solo cuando hay estimaciones", () => {
     const soloSanos = diez(null, "liberar");
-    expect(insignias(soloSanos, protegidos)).toEqual(["perfecto"]);
-    expect(insignias([...soloSanos.slice(0, 9), mk(33, "liberar", false)], protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(soloSanos, protegidos)).toEqual(["perfecto", "sin-panico"]);
+    expect(insignias([...soloSanos.slice(0, 9), mk(33, "liberar", false)], protegidos)).toEqual(["perfecto", "sin-panico", "bayesiano-nato"]);
   });
   it("cazador requiere infectados y haber aislado a todos", () => {
     const conInfectados = [mk(null, "aislar", true), mk(null, "aislar", true), ...diez(null, "liberar").slice(0, 8)];
-    expect(insignias(conInfectados, { modo: "normal", ronda: protegidos.ronda.map((p, i) => ({ ...p, evidencia: i < 2 ? "contacto" as const : "protegido" as const })) })).toEqual(["perfecto", "cazador"]);
-    expect(insignias(diez(null, "liberar"), protegidos)).toEqual(["perfecto"]);
+    expect(insignias(conInfectados, { modo: "normal", ronda: protegidos.ronda.map((p, i) => ({ ...p, evidencia: i < 2 ? "contacto" as const : "protegido" as const })) })).toEqual(["perfecto", "cazador", "sin-panico"]);
+    expect(insignias(diez(null, "liberar"), protegidos)).toEqual(["perfecto", "sin-panico"]);
     const sieteAciertos = [...conInfectados.slice(0, 2), ...diez(null, "aislar").slice(0, 3), ...diez(null, "liberar").slice(0, 5)];
     expect(insignias(sieteAciertos, { modo: "normal", ronda: protegidos.ronda.map((p, i) => ({ ...p, evidencia: i < 2 ? "contacto" as const : "protegido" as const })) })).toEqual(["cazador"]);
     expect(insignias([{ ...conInfectados[0], decision: "liberar" }, ...conInfectados.slice(1)])).not.toContain("cazador");
@@ -146,9 +146,47 @@ describe("insignias", () => {
   });
   it("los límites 25 y 40 del promedio legacy son inclusivos; justo afuera no", () => {
     const conEstimacion = (est: number) => diez(est, "liberar");
-    expect(insignias(conEstimacion(25), protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
-    expect(insignias(conEstimacion(40), protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
-    expect(insignias(conEstimacion(24), protegidos)).toEqual(["perfecto"]);
-    expect(insignias(conEstimacion(41), protegidos)).toEqual(["perfecto"]);
+    expect(insignias(conEstimacion(25), protegidos)).toEqual(["perfecto", "sin-panico", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(40), protegidos)).toEqual(["perfecto", "sin-panico", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(24), protegidos)).toEqual(["perfecto", "sin-panico"]);
+    expect(insignias(conEstimacion(41), protegidos)).toEqual(["perfecto", "sin-panico"]);
+  });
+});
+
+describe("insignias: experto, rayo y sin pánico", () => {
+  const diez = (est: number | null, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
+  const ctx = (evidencia: "protegido" | "sin-antecedentes" | "conviviente", modo: "normal" | "experto" = "normal") => ({
+    modo,
+    ronda: Array.from({ length: 10 }, (_, i) => ({ orden: i + 1, evidencia })),
+  });
+
+  it("experto: 7 o más decisiones óptimas, solo en modo experto", () => {
+    const siete = [...diez(null, "liberar").slice(0, 7), ...diez(null, "aislar").slice(0, 3)];
+    expect(insignias(siete, ctx("sin-antecedentes", "experto"))).toContain("experto");
+    expect(insignias(siete, PREVALENCIA_EXPERTO)).toContain("experto");
+    expect(insignias(siete, ctx("sin-antecedentes", "normal"))).not.toContain("experto");
+    const seis = [...diez(null, "liberar").slice(0, 6), ...diez(null, "aislar").slice(0, 4)];
+    expect(insignias(seis, ctx("sin-antecedentes", "experto"))).not.toContain("experto");
+  });
+
+  it("rayo: la suma de tiempos de la ronda debe quedar por debajo de 60 s y todos deben tener tiempo", () => {
+    const con = (ms: number | undefined) => diez(null, "liberar").map((r) => ({ ...r, tiempo_ms: ms }));
+    expect(insignias(con(5000), ctx("protegido"))).toContain("rayo");
+    expect(insignias(con(6000), ctx("protegido"))).not.toContain("rayo");
+    const sinTiempo = con(1000).map((r, i) => (i === 0 ? { ...r, tiempo_ms: undefined } : r));
+    expect(insignias(sinTiempo, ctx("protegido"))).not.toContain("rayo");
+    expect(insignias(diez(null, "liberar"), ctx("protegido"))).not.toContain("rayo");
+  });
+
+  it("sin pánico: ningún sano de poca evidencia aislado y al menos un paciente de poca evidencia", () => {
+    const rs = diez(null, "liberar");
+    expect(insignias(rs, ctx("protegido"))).toContain("sin-panico");
+    const aisladoProtegido = rs.map((r, i) => (i === 1 ? { ...r, decision: "aislar" as const } : r));
+    expect(insignias(aisladoProtegido, ctx("protegido"))).not.toContain("sin-panico");
+    const aisladoContacto = rs.map((r, i) => (i === 1 ? { ...r, decision: "aislar" as const } : r));
+    const conContacto = { modo: "normal" as const, ronda: rs.map((_, i) => ({ orden: i + 1, evidencia: i === 1 ? "contacto" as const : "protegido" as const })) };
+    expect(insignias(aisladoContacto, conContacto)).toContain("sin-panico");
+    expect(insignias(rs, ctx("conviviente"))).not.toContain("sin-panico");
+    expect(insignias(rs, PREVALENCIA)).not.toContain("sin-panico");
   });
 });

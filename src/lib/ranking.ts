@@ -1,10 +1,21 @@
-import { resolverInsignias, type InsigniaInfo } from "./insignias";
+import { resolverInsignias, type IconoInsignia, type InsigniaInfo } from "./insignias";
 
 /** Regla del ranking: solo el primer intento por apodo y dificultad; desempate por menor tiempo total. */
 
+/** Los chips del panel solo dibujan estos tres iconos; las medallas nuevas usan el más parecido. */
+export type IconoChip = "brain" | "shield-check" | "smile";
+const ICONO_CHIP: Record<IconoInsignia, IconoChip> = {
+  brain: "brain",
+  "shield-check": "shield-check",
+  smile: "smile",
+  zap: "smile",
+  leaf: "shield-check",
+  "flask-conical": "brain",
+};
+
 /** Convierte ids recibidos por la API en chips visibles, omitiendo los que no conoce este cliente. */
-export function informacionInsignias(ids: readonly string[]): Pick<InsigniaInfo, "id" | "titulo" | "icono">[] {
-  return resolverInsignias(ids).map(({ id, titulo, icono }) => ({ id, titulo, icono }));
+export function informacionInsignias(ids: readonly string[]): { id: InsigniaInfo["id"]; titulo: string; icono: IconoChip }[] {
+  return resolverInsignias(ids).map(({ id, titulo, icono }) => ({ id, titulo, icono: ICONO_CHIP[icono] }));
 }
 
 export const INICIO_TEMPORADA_ACTUAL = "2026-10-19T00:00:00.000Z";
