@@ -1,27 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { urlPodio } from "@/lib/panel";
+import { queryConRevelar, urlPodio } from "@/lib/panel";
 import { cn } from "@/lib/utils";
 import { ActividadReciente } from "./ActividadReciente";
 import { BotonExportar } from "./BotonExportar";
 import { ContadorPartidas } from "./ContadorPartidas";
+import { EntradaPanel } from "./EntradaPanel";
 import { FiltroPrevalencia } from "./FiltroPrevalencia";
 import { FondoPanel } from "./FondoPanel";
-import { HistogramaEstimaciones } from "./HistogramaEstimaciones";
+import { GraficoDecisiones } from "./GraficoDecisiones";
 import { IndicadorEnVivo } from "./IndicadorEnVivo";
 import { QrJuego } from "./QrJuego";
 import { RankingTop10 } from "./RankingTop10";
 import { TarjetasEstadisticas } from "./TarjetasEstadisticas";
-import { usePanelDatos, type ModoPanel } from "./usePanelDatos";
+import { PREVALENCIA_POR_MODO, usePanelDatos, type ModoPanel } from "./usePanelDatos";
 
-type Props = { clave?: string };
+type Props = {
+  clave?: string;
+  /** Valor de ?revelar=1 en la URL al cargar; el presentador lo cambia con el botón. */
+  revelarInicial?: boolean;
+};
 
-/** Panel del proyector: QR + contador + actividad | cifras + histograma | ranking. Actualiza cada 2 s. */
-export function PanelEnVivo({ clave }: Props) {
+/** Panel del proyector: QR + contador + actividad | cifras + decisiones | ranking. Actualiza cada 2 s. */
+export function PanelEnVivo({ clave, revelarInicial = false }: Props) {
   const [modo, setModo] = useState<ModoPanel>("normal");
+  const [revelar, setRevelar] = useState(revelarInicial);
   const { stats, ranking, actividad, error, cargando, desactualizado, ultimaActualizacion } = usePanelDatos(modo);
+
+  // Cambia ?revelar= sin recargar ni pasar por el servidor; la URL queda compartible.
+  function alternarRevelar() {
+    const siguiente = !revelar;
+    setRevelar(siguiente);
+    const { pathname, search } = window.location;
+    window.history.replaceState(null, "", `${pathname}${queryConRevelar(search, siguiente)}`);
+  }
 
   return (
     <FondoPanel pulso={stats?.totalPartidas ?? 0}>
@@ -33,6 +48,18 @@ export function PanelEnVivo({ clave }: Props) {
           <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4">
             <IndicadorEnVivo ultimaActualizacion={ultimaActualizacion} error={error} />
             <FiltroPrevalencia modo={modo} onCambiar={setModo} />
+            <button
+              type="button"
+              aria-pressed={revelar}
+              onClick={alternarRevelar}
+              className={cn(
+                buttonVariants({ variant: revelar ? "warning" : "outline", size: "lg" }),
+                "min-h-11 flex-1 gap-2 text-base sm:min-h-14 sm:flex-none sm:text-xl 2xl:text-2xl",
+              )}
+            >
+              {revelar ? <EyeOff aria-hidden="true" className="size-5 sm:size-6" /> : <Eye aria-hidden="true" className="size-5 sm:size-6" />}
+              {revelar ? "Ocultar respuesta" : "Revelar respuesta"}
+            </button>
             <a
               href={urlPodio(clave)}
               className={cn(buttonVariants({ variant: "outline", size: "lg" }), "min-h-11 flex-1 text-base sm:min-h-14 sm:flex-none sm:text-xl 2xl:text-2xl")}
@@ -51,26 +78,28 @@ export function PanelEnVivo({ clave }: Props) {
           )}
         >
           <div className="flex min-h-0 flex-col gap-3 sm:gap-4 2xl:gap-6">
-            <QrJuego />
-            <ContadorPartidas total={stats?.totalPartidas} />
+            <EntradaPanel retardo={0}>
+              <QrJuego />
+            </EntradaPanel>
+            <EntradaPanel retardo={0.1}>
+              <ContadorPartidas total={stats?.totalPartidas} />
+            </EntradaPanel>
           </div>
 
           <div className="flex min-h-0 flex-col gap-3 sm:gap-4 2xl:gap-6">
-            <TarjetasEstadisticas stats={stats} />
-            <HistogramaEstimaciones
-              histograma={stats?.histograma}
-              vppTeoricoPct={stats?.vppTeoricoPct}
-              totalRespuestas={stats?.n ?? 0}
-            />
+            <TarjetasEstadisticas stats={stats} revelar={revelar} />
+            <EntradaPanel retardo={0.5} className="flex-1">
+              <GraficoDecisiones porEvidencia={stats?.porEvidencia} n={stats?.n ?? 0} revelar={revelar} />
+            </EntradaPanel>
           </div>
 
-          <div className="flex min-h-0 flex-col lg:col-span-2 2xl:col-span-1">
-            <RankingTop10 ranking={ranking} />
-          </div>
+          <EntradaPanel retardo={0.6} className="lg:col-span-2 2xl:col-span-1">
+            <RankingTop10 ranking={ranking} prevalencia={PREVALENCIA_POR_MODO[modo]} />
+          </EntradaPanel>
 
-          <div className="flex min-h-0 flex-col lg:col-span-2 2xl:col-span-3">
+          <EntradaPanel retardo={0.7} className="lg:col-span-2 2xl:col-span-3">
             <ActividadReciente actividad={actividad} />
-          </div>
+          </EntradaPanel>
         </div>
       </main>
     </FondoPanel>

@@ -22,10 +22,10 @@ export function coloresTema(): { primary: string; success: string; warning: stri
 }
 
 /**
- * Lluvia de confeti con los colores del tema.
+ * Lluvia de confeti con los colores del tema. `origen` va en fracciones de la pantalla (0 a 1); por defecto, abajo al centro.
  * No hace nada si el usuario prefiere movimiento reducido.
  */
-export function festejar(): void {
+export function festejar(origen: { x: number; y: number } = { x: 0.5, y: 0.6 }): void {
   try {
     if (typeof window === "undefined") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
@@ -33,7 +33,7 @@ export function festejar(): void {
     void confetti({
       particleCount: 120,
       spread: 75,
-      origin: { y: 0.6 },
+      origin: origen,
       colors: [t.primary, t.success, t.warning, t.info, "#ffffff"],
       disableForReducedMotion: true,
     });

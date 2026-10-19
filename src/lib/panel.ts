@@ -2,27 +2,29 @@ import { z } from "zod";
 
 /** Lógica pura del panel del proyector (sin React). */
 
-const esquemaCubeta = z.object({
-  desde: z.number(),
-  hasta: z.number(),
-  cantidad: z.number(),
+/** Una evidencia del gráfico de decisiones (ver src/lib/decisiones.ts). */
+const esquemaEvidencia = z.object({
+  evidencia: z.string(),
+  etiqueta: z.string(),
+  previoPct: z.number(),
+  posteriorPct: z.number(),
+  optima: z.enum(["aislar", "liberar"]),
+  casos: z.number(),
+  aislaronPct: z.number().nullable(),
 });
 
-/** Forma de GET /api/stats?prevalencia= (ver src/app/api/stats/route.ts). */
+/** Forma de GET /api/stats?prevalencia= (ver src/app/api/stats/route.ts). Solo decisiones de temporada, primer intento. */
 export const esquemaStats = z.object({
   prevalencia: z.number().nullable(),
   totalPartidas: z.number(),
   /** Jugadores distintos (primeros intentos); opcional por compatibilidad. */
   totalJugadores: z.number().optional(),
   n: z.number(),
-  estimacionPromedioPct: z.number().nullable(),
-  vppObservadoPct: z.number().nullable(),
   vppTeoricoPct: z.number(),
-  pctSobreestiman: z.number().nullable(),
-  pctAislados: z.number().nullable(),
-  aisladosSanos: z.number(),
-  liberadosInfectados: z.number(),
-  histograma: z.array(esquemaCubeta),
+  vppObservadoPct: z.number().nullable(),
+  decisionesOptimasPct: z.number().nullable(),
+  puntajePromedio: z.number().nullable(),
+  porEvidencia: z.array(esquemaEvidencia),
 });
 
 /** Forma de GET /api/ranking?prevalencia= (ver src/app/api/ranking/route.ts). */
@@ -56,49 +58,9 @@ export const esquemaActividad = z.object({
 export type StatsPanel = z.infer<typeof esquemaStats>;
 export type RankingPanel = z.infer<typeof esquemaRanking>;
 export type EntradaRanking = RankingPanel["ranking"][number];
-export type CubetaApi = z.infer<typeof esquemaCubeta>;
+export type EvidenciaPanel = z.infer<typeof esquemaEvidencia>;
 export type ActividadPanel = z.infer<typeof esquemaActividad>;
 export type EntradaActividad = ActividadPanel["actividad"][number];
-
-export type FilaHistograma = CubetaApi & { etiqueta: string; porcentaje: number };
-
-/** Filas del gráfico: etiqueta "0–9"… "90–100" y porcentaje sobre el total de respuestas. */
-export function datosHistograma(histograma: CubetaApi[]): FilaHistograma[] {
-  const total = histograma.reduce((a, c) => a + c.cantidad, 0);
-  return histograma.map((c) => ({
-    ...c,
-    etiqueta: `${c.desde}–${c.hasta}`,
-    porcentaje: total === 0 ? 0 : (c.cantidad / total) * 100,
-  }));
-}
-
-const CUBETAS = 10;
-
-/**
- * Posición de una línea vertical sobre el eje de 10 cubetas.
- * `posicion` va de 0 a 10 (0 = borde izquierdo de "0–9", 10 = borde derecho de "90–100").
- */
-export function posicionLineaVpp(vppPct: number): { indice: number; offset: number; posicion: number } {
-  const posicion = Math.min(CUBETAS, Math.max(0, vppPct / 10));
-  const indice = Math.min(CUBETAS - 1, Math.floor(posicion));
-  return { indice, offset: posicion - indice, posicion };
-}
-
-/** Alineación del texto respecto a la línea vertical. */
-export type AnclajeEtiqueta = "start" | "middle" | "end";
-
-const BORDE_ETIQUETA = 3;
-
-/**
- * Hacia dónde crece la etiqueta de la línea para no recortarse en los bordes:
- * cerca del borde izquierdo el texto sigue a la derecha de la línea ("start"),
- * cerca del derecho va a su izquierda ("end"), y en el centro se centra.
- */
-export function anclajeEtiquetaVpp(posicion: number): AnclajeEtiqueta {
-  if (posicion < BORDE_ETIQUETA) return "start";
-  if (posicion > CUBETAS - BORDE_ETIQUETA) return "end";
-  return "middle";
-}
 
 /** "hace 5 s", "hace 2 min", "hace 3 h", "hace 2 d" desde `creadaEn` hasta `ahora` (ms). Nunca negativo; "" si la fecha no sirve. */
 export function tiempoRelativo(creadaEn: string, ahora: number): string {
@@ -116,6 +78,12 @@ export function tiempoRelativo(creadaEn: string, ahora: number): string {
 /** Número con coma decimal (es), sin depender de los datos ICU del entorno. */
 export function formatoNumero(n: number, decimales = 1): string {
   return n.toFixed(decimales).replace(".", ",");
+}
+
+/** Puntaje promedio por ronda (0 a 10): "6,4" o "—". */
+export function formatoPuntaje(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  return formatoNumero(n, 1);
 }
 
 /** "33,3 %" o "—" si no hay dato. */
@@ -149,4 +117,23 @@ export function urlExport(key?: string, formato: "xlsx" | "csv" = "xlsx"): strin
 /** Enlace al podio de la feria (protegido por la misma clave del panel). */
 export function urlPodio(key?: string): string {
   return key ? `/podio?key=${encodeURIComponent(key)}` : "/podio";
+}
+
+/** Valor de ?revelar=: "1" o "true" muestran las respuestas (VPP teórico, VPP observado, óptimas); cualquier otra cosa las oculta. */
+export function esRevelarActivo(valor: string | null | undefined): boolean {
+  return valor === "1" || valor === "true";
+}
+
+/** Lee ?revelar= de una query string ("?key=x&revelar=1" o "key=x&revelar=1"). */
+export function leerRevelar(query: string): boolean {
+  return esRevelarActivo(new URLSearchParams(query).get("revelar"));
+}
+
+/** Query con revelar fijado en `revelar` y el resto de parámetros intacto (p. ej. key). Vacía si no queda nada. */
+export function queryConRevelar(query: string, revelar: boolean): string {
+  const params = new URLSearchParams(query);
+  if (revelar) params.set("revelar", "1");
+  else params.delete("revelar");
+  const texto = params.toString();
+  return texto ? `?${texto}` : "";
 }

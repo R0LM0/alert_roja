@@ -197,3 +197,53 @@ html .katex {
     display: none;
   }
 }
+
+/* Panel del proyector: "EN VIVO" con degradado animado y pulso de brillo (solo CSS) */
+.texto-en-vivo {
+  background: linear-gradient(90deg, var(--primary-text), var(--warning), var(--primary-text));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: texto-en-vivo 3s linear infinite;
+}
+@keyframes texto-en-vivo {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+.pastilla-en-vivo {
+  animation: pastilla-en-vivo 2.4s ease-in-out infinite;
+}
+@keyframes pastilla-en-vivo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 0);
+  }
+  50% {
+    box-shadow: 0 0 28px -4px rgb(220 38 38 / 0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .texto-en-vivo {
+    animation: none;
+    background: none;
+    color: var(--primary-text);
+  }
+  .pastilla-en-vivo {
+    animation: none;
+  }
+}
+
+/* Panel 2xl (1920x1080): cifras más bajas para que el gráfico de decisiones quepa en su columna */
+@media (min-width: 1536px) {
+  .cifras-panel [data-testid="tarjeta-estadistica"] {
+    padding: 1rem;
+  }
+  .cifras-panel [data-testid="stat-valor"] {
+    font-size: 4.5rem;
+  }
+}
