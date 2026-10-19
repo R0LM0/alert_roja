@@ -48,12 +48,23 @@ const RANKING_LLENO = Array.from({ length: 8 }, (_, i) => ({
   tiempoTotalMs: 61_000 + i * 7_300,
 }));
 
+const ACTIVIDAD_LLENA = Array.from({ length: 8 }, (_, i) => ({
+  id: `00000000-0000-4000-8000-00000000000${i}`,
+  jugador: i === 0 ? "OtroApodoMuyLargoSinEspaciosNada" : `Visitante${i + 1}`,
+  puntaje: 800 - i * 21,
+  creada_en: new Date(Date.now() - (i + 1) * 40_000).toISOString(),
+  primer_intento: i !== 2,
+}));
+
 async function simularApi(page: Page, vacio: boolean) {
   await page.route("**/api/stats*", (r) =>
     r.fulfill({ contentType: "application/json", body: JSON.stringify(vacio ? STATS_VACIO : STATS_LLENO) }),
   );
   await page.route("**/api/ranking*", (r) =>
     r.fulfill({ contentType: "application/json", body: JSON.stringify({ ranking: vacio ? [] : RANKING_LLENO }) }),
+  );
+  await page.route("**/api/actividad*", (r) =>
+    r.fulfill({ contentType: "application/json", body: JSON.stringify({ actividad: vacio ? [] : ACTIVIDAD_LLENA }) }),
   );
 }
 
@@ -88,6 +99,9 @@ for (const vista of VISTAS) {
       await page.goto("/panel?key=x");
       await expect(page.getByTestId("tarjeta-estadistica")).toHaveCount(4);
       await expect(ticksX(page).first()).toBeVisible();
+      await expect(page.getByText("EN VIVO", { exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Acaban de jugar" })).toBeVisible();
+      await expect(page.getByText("OtroApodoMuyLargoSinEspaciosNada")).toBeVisible();
 
       const desborde = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(desborde, "desborde horizontal de la página").toBeLessThanOrEqual(0);

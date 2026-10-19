@@ -39,10 +39,26 @@ export const esquemaRanking = z.object({
   ),
 });
 
+/** Una partida del feed "Acaban de jugar" (todos los intentos, no solo el primero). */
+const esquemaActividadPartida = z.object({
+  id: z.string(),
+  jugador: z.string(),
+  puntaje: z.number(),
+  creada_en: z.string(),
+  primer_intento: z.boolean(),
+});
+
+/** Forma de GET /api/actividad?prevalencia= (ver src/app/api/actividad/route.ts). */
+export const esquemaActividad = z.object({
+  actividad: z.array(esquemaActividadPartida),
+});
+
 export type StatsPanel = z.infer<typeof esquemaStats>;
 export type RankingPanel = z.infer<typeof esquemaRanking>;
 export type EntradaRanking = RankingPanel["ranking"][number];
 export type CubetaApi = z.infer<typeof esquemaCubeta>;
+export type ActividadPanel = z.infer<typeof esquemaActividad>;
+export type EntradaActividad = ActividadPanel["actividad"][number];
 
 export type FilaHistograma = CubetaApi & { etiqueta: string; porcentaje: number };
 
@@ -82,6 +98,19 @@ export function anclajeEtiquetaVpp(posicion: number): AnclajeEtiqueta {
   if (posicion < BORDE_ETIQUETA) return "start";
   if (posicion > CUBETAS - BORDE_ETIQUETA) return "end";
   return "middle";
+}
+
+/** "hace 5 s", "hace 2 min", "hace 3 h", "hace 2 d" desde `creadaEn` hasta `ahora` (ms). Nunca negativo; "" si la fecha no sirve. */
+export function tiempoRelativo(creadaEn: string, ahora: number): string {
+  const t = Date.parse(creadaEn);
+  if (!Number.isFinite(t)) return "";
+  const seg = Math.max(0, Math.floor((ahora - t) / 1000));
+  if (seg < 60) return `hace ${seg} s`;
+  const min = Math.floor(seg / 60);
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} d`;
 }
 
 /** Número con coma decimal (es), sin depender de los datos ICU del entorno. */

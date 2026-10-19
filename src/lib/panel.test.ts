@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   datosHistograma,
+  esquemaActividad,
   esquemaRanking,
   esquemaStats,
+  tiempoRelativo,
   formatoEntero,
   formatoNumero,
   formatoPct,
@@ -153,5 +155,42 @@ describe("esquemas de respuesta", () => {
     expect(esquemaRanking.safeParse(conTiempo).success).toBe(true);
     expect(esquemaRanking.safeParse({ ranking: [{ ...ok.ranking[0], tiempoTotalMs: null }] }).success).toBe(true);
     expect(esquemaRanking.safeParse({ ranking: [{ jugador: 1 }] }).success).toBe(false);
+  });
+});
+
+describe("esquemaActividad", () => {
+  const partida = {
+    id: "7d1c2b4e-0000-4000-8000-000000000001",
+    jugador: "Ana",
+    puntaje: 300,
+    creada_en: "2026-10-19T12:00:00.000Z",
+    primer_intento: true,
+  };
+
+  it("acepta la forma de /api/actividad, también la lista vacía", () => {
+    expect(esquemaActividad.safeParse({ actividad: [partida] }).success).toBe(true);
+    expect(esquemaActividad.safeParse({ actividad: [] }).success).toBe(true);
+  });
+
+  it("rechaza campos faltantes o de tipo incorrecto", () => {
+    expect(esquemaActividad.safeParse({ actividad: [{ ...partida, primer_intento: "si" }] }).success).toBe(false);
+    expect(esquemaActividad.safeParse({ actividad: [{ jugador: "Ana" }] }).success).toBe(false);
+    expect(esquemaActividad.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("tiempoRelativo", () => {
+  const ahora = Date.parse("2026-10-19T12:10:00.000Z");
+
+  it("expresa segundos, minutos, horas y días", () => {
+    expect(tiempoRelativo("2026-10-19T12:09:55.000Z", ahora)).toBe("hace 5 s");
+    expect(tiempoRelativo("2026-10-19T12:09:00.000Z", ahora)).toBe("hace 1 min");
+    expect(tiempoRelativo("2026-10-19T09:10:00.000Z", ahora)).toBe("hace 3 h");
+    expect(tiempoRelativo("2026-10-17T12:10:00.000Z", ahora)).toBe("hace 2 d");
+  });
+
+  it("no muestra tiempos negativos (desfase de reloj) y no falla con fechas inválidas", () => {
+    expect(tiempoRelativo("2026-10-19T12:10:30.000Z", ahora)).toBe("hace 0 s");
+    expect(tiempoRelativo("no es fecha", ahora)).toBe("");
   });
 });
