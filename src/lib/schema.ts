@@ -8,6 +8,7 @@ export const respuestaSchema = z.object({
   orden: z.number().int().min(1).max(PACIENTES_POR_RONDA),
   estimacion_pct: z.number().int().min(0).max(100).nullish().transform((pct) => pct ?? null),
   decision: z.enum(["aislar", "liberar"]),
+  evidencia: z.enum(["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"]),
   estaba_infectado: z.boolean(),
   tiempo_ms: z.number().int().min(0).max(600_000),
 });

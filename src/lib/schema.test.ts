@@ -11,6 +11,33 @@ const base = () => {
   );
 };
 
+describe("respuestaSchema.evidencia", () => {
+  it("exige y acepta las cinco evidencias clínicas válidas", () => {
+    for (const evidencia of ["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"]) {
+      const original = base();
+      const respuestas = original.respuestas.map((r) => ({ ...r, evidencia }));
+      const parsed = partidaSchema.safeParse({ ...original, respuestas });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.respuestas.every((r) => r.evidencia === evidencia)).toBe(true);
+    }
+  });
+
+  it("rechaza una evidencia desconocida en el payload", () => {
+    const original = base();
+    const respuestas = original.respuestas.map((r) => ({ ...r, evidencia: "conviviente" }));
+    respuestas[0].evidencia = "desconocida";
+    expect(partidaSchema.safeParse({ ...original, respuestas }).success).toBe(false);
+  });
+
+  it("rechaza un payload si a una respuesta le falta la evidencia", () => {
+    const original = base();
+    const respuestas = original.respuestas.map((r) => ({ ...r, evidencia: "conviviente" }));
+    const [{ evidencia: _evidencia, ...sinEvidencia }, ...resto] = respuestas;
+    expect(partidaSchema.safeParse({ ...original, respuestas: [sinEvidencia, ...resto] }).success).toBe(false);
+    expect(partidaSchema.safeParse({ ...original, respuestas: respuestas.map(({ evidencia: _ev, ...r }) => r) }).success).toBe(false);
+  });
+});
+
 describe("respuestaSchema.estimacion_pct", () => {
   it("acepta null u omisión y sigue rechazando porcentajes inválidos", () => {
     const original = base();

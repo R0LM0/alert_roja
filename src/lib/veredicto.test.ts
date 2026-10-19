@@ -9,7 +9,10 @@ function fila(estaba_infectado: boolean, decision: FilaPaciente["decision"]): Fi
     estimacionPct: null,
     decision,
     estaba_infectado,
-    puntaje: 0,
+    evidencia: "sin-antecedentes",
+    previo: 0.1,
+    posterior: 1 / 3,
+    puntos: 0,
     decisionAcertada: false,
   };
 }
@@ -54,8 +57,14 @@ describe("calcularVeredicto", () => {
       infectadosLiberados: 0,
       infectadosAislados: 0,
       titulo: "La ciudad está a salvo",
-      detalle: "Aislaste a los 0 pacientes infectados y no se escapó ninguno.",
+      detalle: "No hubo ningún infectado en tu ronda: nadie contagió a la ciudad.",
     });
+  });
+
+  it("sin infectados pero con pacientes da el mismo texto específico", () => {
+    expect(calcularVeredicto([fila(false, "aislar"), fila(false, "liberar")]).detalle).toBe(
+      "No hubo ningún infectado en tu ronda: nadie contagió a la ciudad.",
+    );
   });
 
   it("usa el plural al aislar a varios infectados", () => {

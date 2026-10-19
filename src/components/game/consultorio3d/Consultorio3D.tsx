@@ -16,6 +16,7 @@ import {
   webglDisponible,
 } from "@/lib/consultorio3d";
 import { duracionEnsamblado } from "@/lib/consultorio-layout";
+import { POS_CUARENTENA, type SalidaPaciente } from "@/lib/paciente3d";
 import { Paciente } from "./Paciente";
 
 type Punto = [number, number, number];
@@ -96,6 +97,9 @@ function Escenario() {
       </mesh>
 
       <Caja posicion={[0, -0.06, 0.5]} tamano={[10, 0.1, 9]} color="#d79b60" />
+      {/* Zona de cuarentena a la izquierda, separada del recorrido hacia la puerta. */}
+      <Caja posicion={[POS_CUARENTENA[0], 0.005, POS_CUARENTENA[2]]} tamano={[1.15, 0.03, 1.4]} color="#537e79" />
+      <Caja posicion={[POS_CUARENTENA[0], 0.025, POS_CUARENTENA[2]]} tamano={[0.95, 0.015, 1.2]} color="#a5cfb7" />
       <Caja posicion={[-2.85, 1.5, -4]} tamano={[4.3, 3, 0.1]} color="#f3e2cc" />
       <Caja posicion={[2.85, 1.5, -4]} tamano={[4.3, 3, 0.1]} color="#f3e2cc" />
       <Caja posicion={[0, 2.8, -4]} tamano={[1.4, 0.4, 0.1]} color="#f3e2cc" />
@@ -205,10 +209,11 @@ type PropsHabitacion = {
   listo: boolean;
   semillaPaciente?: string;
   saliendoPaciente?: boolean;
+  salidaPaciente?: SalidaPaciente | null;
   alLlegarPaciente?: () => void;
 };
 
-function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, alLlegarPaciente }: PropsHabitacion) {
+function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsHabitacion) {
   const { camera } = useThree();
   const bisagra = useRef<THREE.Group>(null);
   const inicio = useRef<number | null>(null);
@@ -240,6 +245,7 @@ function Habitacion({ alListo, listo, semillaPaciente, saliendoPaciente, alLlega
           key={semillaPaciente}
           seed={semillaPaciente}
           saliendo={!!saliendoPaciente}
+          salida={salidaPaciente ?? "puerta"}
           alLlegar={alLlegarPaciente}
           reducido={reducido.current}
         />
@@ -263,11 +269,12 @@ type PropsConsultorio3D = {
   alListo?: () => void;
   semillaPaciente?: string;
   saliendoPaciente?: boolean;
+  salidaPaciente?: SalidaPaciente | null;
   alLlegarPaciente?: () => void;
 };
 
 /** Decorado de consultorio en primera persona; vuelve al SVG si falta WebGL. */
-export default function Consultorio3D({ alListo, semillaPaciente, saliendoPaciente, alLlegarPaciente }: PropsConsultorio3D) {
+export default function Consultorio3D({ alListo, semillaPaciente, saliendoPaciente, salidaPaciente, alLlegarPaciente }: PropsConsultorio3D) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [listo, setListo] = useState(false);
@@ -335,6 +342,7 @@ export default function Consultorio3D({ alListo, semillaPaciente, saliendoPacien
           listo={listo}
           semillaPaciente={semillaPaciente}
           saliendoPaciente={saliendoPaciente}
+          salidaPaciente={salidaPaciente}
           alLlegarPaciente={avisarLlegada}
         />
       </Canvas>

@@ -27,6 +27,18 @@ function resultado() {
 }
 
 describe("sesion-juego", () => {
+  it("conserva todas las evidencias al leer la ronda y rechaza evidencias inválidas o ausentes", () => {
+    const a = almacen();
+    const r = resultado();
+    const evidencias = ["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"] as const;
+    const conEvidencia = { ...r, ronda: r.ronda.map((p, i) => ({ ...p, evidencia: evidencias[i % evidencias.length] })) };
+    guardarResultado(conEvidencia, a);
+    expect(leerResultado(a)?.ronda.map((p) => p.evidencia)).toEqual([...evidencias, ...evidencias]);
+    a.setItem("alerta-roja:resultado", JSON.stringify({ ...conEvidencia, ronda: conEvidencia.ronda.map((p, i) => i ? p : { ...p, evidencia: "desconocida" }) }));
+    expect(leerResultado(a)).toBeNull();
+    a.setItem("alerta-roja:resultado", JSON.stringify({ ...conEvidencia, ronda: conEvidencia.ronda.map(({ evidencia: _evidencia, ...p }) => p) }));
+    expect(leerResultado(a)).toBeNull();
+  });
   it("guarda y lee un resultado", () => {
     const a = almacen();
     guardarResultado(resultado(), a);

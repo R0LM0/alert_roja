@@ -56,6 +56,7 @@ export function Turno({ modo }: { modo: Modo }) {
   // a que llegue a su silla (S7). Al decidir, sale caminando antes del siguiente.
   const [llegoPaciente, setLlegoPaciente] = useState(false);
   const [saliendoPaciente, setSaliendoPaciente] = useState(false);
+  const [salidaPaciente, setSalidaPaciente] = useState<"cuarentena" | "puerta" | null>(null);
   const movimientoReducido = useReducedMotion() ?? false;
 
   const respuestas = useRef<RespuestaUI[]>([]);
@@ -124,6 +125,7 @@ export function Turno({ modo }: { modo: Modo }) {
     setTiempoAgotado(false);
     setLlegoPaciente(false);
     setSaliendoPaciente(false);
+    setSalidaPaciente(null);
     setIndice(indice + 1);
   }
 
@@ -145,6 +147,7 @@ export function Turno({ modo }: { modo: Modo }) {
       },
     ];
     // El paciente sale caminando (~2 s) y recién entonces entra el siguiente.
+    setSalidaPaciente(decision === "aislar" ? "cuarentena" : "puerta");
     setSaliendoPaciente(true);
     if (porTiempo) {
       setTiempoAgotado(true);
@@ -204,7 +207,7 @@ export function Turno({ modo }: { modo: Modo }) {
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
         {/* Fundido de entrada tras el velo negro + misma posición que en jugando. */}
-        <Consultorio3D alListo={alEstarListo} />
+        <Consultorio3D alListo={alEstarListo} salidaPaciente={null} />
         <p
           role="status"
           className="relative z-10 rounded-full bg-surface/90 px-4 py-2 text-lg text-muted shadow-soft"
@@ -252,6 +255,7 @@ export function Turno({ modo }: { modo: Modo }) {
         alListo={alEstarListo}
         semillaPaciente={paciente.seed}
         saliendoPaciente={saliendoPaciente}
+        salidaPaciente={salidaPaciente}
         alLlegarPaciente={() => setLlegoPaciente(true)}
       />
       <p className="sr-only" aria-live="polite">
@@ -305,6 +309,7 @@ export function Turno({ modo }: { modo: Modo }) {
       <TarjetaPaciente
         key={paciente.orden}
         paciente={paciente}
+        evidencia={paciente.evidencia}
         onDecidir={decidir}
         disabled={tiempoAgotado}
       />

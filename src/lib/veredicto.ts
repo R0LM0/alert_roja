@@ -27,6 +27,8 @@ export function calcularVeredicto(filas: FilaPaciente[]): {
     infectadosLiberados,
     infectadosAislados,
     titulo: "La ciudad está a salvo",
-    detalle: `Aislaste a los ${infectadosAislados} ${infectadosAislados === 1 ? "paciente infectado" : "pacientes infectados"} y no se escapó ninguno.`,
+    detalle: infectadosAislados === 0
+      ? "No hubo ningún infectado en tu ronda: nadie contagió a la ciudad."
+      : `Aislaste a los ${infectadosAislados} ${infectadosAislados === 1 ? "paciente infectado" : "pacientes infectados"} y no se escapó ninguno.`,
   };
 }

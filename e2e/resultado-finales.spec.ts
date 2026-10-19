@@ -24,11 +24,15 @@ const NOMBRES = [
 /** Tres infectados (posiciones 3, 7 y 9); el resto sanos. */
 const INFECTADOS = [3, 7, 9];
 
+/** La evidencia es obligatoria en la ronda guardada: se rota entre las cinco. */
+const EVIDENCIAS = ["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"] as const;
+
 function armar(liberarInfectado: boolean) {
   const ronda = NOMBRES.map((nombre, i) => ({
     orden: i + 1,
     nombre,
     seed: `semilla-${i}`,
+    evidencia: EVIDENCIAS[i % EVIDENCIAS.length],
     estaba_infectado: INFECTADOS.includes(i + 1),
   }));
   const respuestas = ronda.map((r) => ({

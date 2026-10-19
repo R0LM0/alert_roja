@@ -4,17 +4,18 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { getPatientAvatarUri } from "@/components/game/patient-avatar";
-import { alphaEntrada, anguloSalida, coloresPaciente, debeAvisarLlegada, derivarAspecto, fasePaciente, pasoWalk, posPaciente } from "@/lib/paciente3d";
+import { alphaEntrada, anguloSalida, coloresPaciente, debeAvisarLlegada, derivarAspecto, fasePaciente, pasoWalk, posPaciente, type SalidaPaciente } from "@/lib/paciente3d";
 
 type PropsPaciente = {
   seed: string;
   saliendo: boolean;
+  salida: SalidaPaciente;
   alLlegar?: () => void;
   reducido: boolean;
 };
 
 /** Un paciente por turno; el cambio de key remonta el recorrido de entrada. */
-export function Paciente({ seed, saliendo, alLlegar, reducido }: PropsPaciente) {
+export function Paciente({ seed, saliendo, salida, alLlegar, reducido }: PropsPaciente) {
   const uri = useMemo(() => getPatientAvatarUri(seed), [seed]);
   const cara = useLoader(THREE.TextureLoader, uri);
   const colores = useMemo(() => coloresPaciente(seed), [seed]);
@@ -55,8 +56,8 @@ export function Paciente({ seed, saliendo, alLlegar, reducido }: PropsPaciente) 
       alLlegarActual.current?.();
     }
     grupo.current.visible = fase !== "fuera";
-    grupo.current.position.set(...posPaciente(t, saliendo));
-    grupo.current.rotation.y = saliendo ? anguloSalida(t) : 0;
+    grupo.current.position.set(...posPaciente(t, saliendo, false, salida));
+    grupo.current.rotation.y = saliendo ? anguloSalida(t, salida) : 0;
     if (!saliendo && !fundidoCompleto.current) {
       const alpha = alphaEntrada(t);
       grupo.current.traverse((objeto) => {

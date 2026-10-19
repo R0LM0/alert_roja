@@ -91,12 +91,24 @@ const mk = (est: number | null, decision: "aislar" | "liberar", inf: boolean): R
 });
 
 describe("puntajePartida", () => {
-  it("suma un punto por decisión acorde a la realidad", () => {
-    const rs = [mk(33, "aislar", true), mk(33, "liberar", false), mk(33, "aislar", false)];
-    expect(puntajePartida(rs, PREVALENCIA)).toBe(2);
+  it("puntúa acciones óptimas por evidencia aunque la verdad oculta contradiga la decisión", () => {
+    const rs = [mk(null, "liberar", true), mk(null, "aislar", false)];
+    const ronda = [{ orden: 1, evidencia: "protegido" as const }, { orden: 2, evidencia: "contacto" as const }];
+    expect(puntajePartida(rs, { modo: "normal", ronda })).toBe(2);
+    expect(puntajePartida(rs, { modo: "experto", ronda })).toBe(1);
   });
-  it("puntúa solo aciertos, sin importar estimaciones antiguas o nulas", () => {
-    expect(puntajePartida([mk(null, "aislar", true), mk(90, "liberar", false), mk(33, "aislar", false)])).toBe(2);
+  it("empareja evidencia por orden cuando las respuestas no están ordenadas", () => {
+    const rs = [
+      { ...mk(null, "aislar", false), orden: 2 },
+      { ...mk(null, "liberar", true), orden: 1 },
+    ];
+    const ronda = [{ orden: 1, evidencia: "protegido" as const }, { orden: 2, evidencia: "contacto" as const }];
+    expect(puntajePartida(rs, { modo: "normal", ronda })).toBe(2);
+  });
+  it("sin evidencia usa sin antecedentes para todas las filas y respeta el modo", () => {
+    const rs = [mk(33, "aislar", false), mk(null, "liberar", true), mk(90, "aislar", false)];
+    expect(puntajePartida(rs, PREVALENCIA)).toBe(2);
+    expect(puntajePartida(rs, PREVALENCIA_EXPERTO)).toBe(1);
   });
   it("sin respuestas = 0", () => {
     expect(puntajePartida([], PREVALENCIA)).toBe(0);
@@ -104,32 +116,39 @@ describe("puntajePartida", () => {
 });
 
 describe("insignias", () => {
+  it("premia 10 decisiones óptimas aunque no coincidan con la infección; cazador exige aislar infectados", () => {
+    const rs = Array.from({ length: 10 }, () => mk(null, "liberar", true));
+    const ronda = rs.map((_, i) => ({ orden: i + 1, evidencia: "protegido" as const }));
+    expect(insignias(rs, { modo: "normal", ronda })).toEqual(["perfecto"]);
+    expect(insignias(rs.map((r, i) => i < 2 ? { ...r, decision: "aislar" as const } : r), { modo: "normal", ronda })).toEqual(["ojo-clinico"]);
+  });
   const diez = (est: number | null, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
+  const protegidos = { modo: "normal" as const, ronda: Array.from({ length: 10 }, (_, i) => ({ orden: i + 1, evidencia: "protegido" as const })) };
   it("bayesiano-nato con promedio en [25, 40] solo cuando hay estimaciones", () => {
     const soloSanos = diez(null, "liberar");
-    expect(insignias(soloSanos)).toEqual(["perfecto"]);
-    expect(insignias([...soloSanos.slice(0, 9), mk(33, "liberar", false)])).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(soloSanos, protegidos)).toEqual(["perfecto"]);
+    expect(insignias([...soloSanos.slice(0, 9), mk(33, "liberar", false)], protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
   });
   it("cazador requiere infectados y haber aislado a todos", () => {
     const conInfectados = [mk(null, "aislar", true), mk(null, "aislar", true), ...diez(null, "liberar").slice(0, 8)];
-    expect(insignias(conInfectados)).toEqual(["perfecto", "cazador"]);
-    expect(insignias(diez(null, "liberar"))).toEqual(["perfecto"]);
+    expect(insignias(conInfectados, { modo: "normal", ronda: protegidos.ronda.map((p, i) => ({ ...p, evidencia: i < 2 ? "contacto" as const : "protegido" as const })) })).toEqual(["perfecto", "cazador"]);
+    expect(insignias(diez(null, "liberar"), protegidos)).toEqual(["perfecto"]);
     const sieteAciertos = [...conInfectados.slice(0, 2), ...diez(null, "aislar").slice(0, 3), ...diez(null, "liberar").slice(0, 5)];
-    expect(insignias(sieteAciertos)).toEqual(["cazador"]);
+    expect(insignias(sieteAciertos, { modo: "normal", ronda: protegidos.ronda.map((p, i) => ({ ...p, evidencia: i < 2 ? "contacto" as const : "protegido" as const })) })).toEqual(["cazador"]);
     expect(insignias([{ ...conInfectados[0], decision: "liberar" }, ...conInfectados.slice(1)])).not.toContain("cazador");
   });
   it("ojo clínico solo con 8-9 aciertos de diez, perfecto solo con diez", () => {
     const todos = diez(null, "liberar");
-    expect(insignias([{ ...todos[0], decision: "aislar" }, ...todos.slice(1)])).toEqual(["ojo-clinico"]);
-    expect(insignias([...diez(null, "aislar").slice(0, 3), ...todos.slice(3)])).toEqual([]);
-    expect(insignias(todos.slice(0, 9))).toEqual([]);
+    expect(insignias([{ ...todos[0], decision: "aislar" }, ...todos.slice(1)], protegidos)).toEqual(["ojo-clinico"]);
+    expect(insignias([...diez(null, "aislar").slice(0, 3), ...todos.slice(3)], protegidos)).toEqual([]);
+    expect(insignias(todos.slice(0, 9), protegidos)).toEqual([]);
     expect(insignias([])).toEqual([]);
   });
   it("los límites 25 y 40 del promedio legacy son inclusivos; justo afuera no", () => {
     const conEstimacion = (est: number) => diez(est, "liberar");
-    expect(insignias(conEstimacion(25))).toEqual(["perfecto", "bayesiano-nato"]);
-    expect(insignias(conEstimacion(40))).toEqual(["perfecto", "bayesiano-nato"]);
-    expect(insignias(conEstimacion(24))).toEqual(["perfecto"]);
-    expect(insignias(conEstimacion(41))).toEqual(["perfecto"]);
+    expect(insignias(conEstimacion(25), protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(40), protegidos)).toEqual(["perfecto", "bayesiano-nato"]);
+    expect(insignias(conEstimacion(24), protegidos)).toEqual(["perfecto"]);
+    expect(insignias(conEstimacion(41), protegidos)).toEqual(["perfecto"]);
   });
 });

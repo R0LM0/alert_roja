@@ -47,9 +47,11 @@ export function derivarAspecto(seed: string) {
   };
 }
 
-/** Ángulo hacia la puerta, independientemente de los 2 s de caminata. */
-export function anguloSalida(t: number): number {
-  return Math.PI * suavizar(t / DURACION_GIRO_MS);
+/** El paciente mira en la dirección de su destino, con un giro suave al iniciar la marcha. */
+export function anguloSalida(t: number, salida: SalidaPaciente = "puerta"): number {
+  if (t <= 0) return 0;
+  const [x, , z] = salida === "cuarentena" ? POS_CUARENTENA : POS_PUERTA;
+  return Math.atan2(x, z) * suavizar(t / DURACION_GIRO_MS);
 }
 
 /** Fundido solo durante la entrada; movimiento reducido presenta el paciente completo. */
@@ -57,8 +59,11 @@ export function alphaEntrada(t: number, reducido = false): number {
   return reducido ? 1 : Math.min(Math.max(t / DURACION_FUNDIDO_MS, 0), 1);
 }
 
-const Z_PUERTA = -3.6;
 type Punto3D = [number, number, number];
+export type SalidaPaciente = "cuarentena" | "puerta";
+const POS_PUERTA: Punto3D = [0, 0, -3.6];
+// A la izquierda de la puerta, dentro del encuadre incluso en pantallas estrechas.
+export const POS_CUARENTENA: Punto3D = [-1.15, 0, -2.85];
 type FasePaciente = "entrando" | "atendiendo" | "saliendo" | "fuera";
 
 function suavizar(p: number): number {
@@ -72,11 +77,18 @@ export function fasePaciente(t: number, saliendo: boolean, reducido = false): Fa
   return reducido || t >= DURACION_ENTRADA_MS ? "atendiendo" : "entrando";
 }
 
-/** De la puerta al escritorio, o desde el escritorio de vuelta a la puerta. */
-export function posPaciente(t: number, saliendo: boolean, reducido = false): Punto3D {
-  if (reducido) return [0, 0, saliendo ? Z_PUERTA : 0];
-  if (saliendo) return [0, 0, t <= 0 ? 0 : Z_PUERTA * suavizar(t / DURACION_SALIDA_MS)];
-  return [0, 0, t >= DURACION_ENTRADA_MS ? 0 : Z_PUERTA * (1 - suavizar(t / DURACION_ENTRADA_MS))];
+/** De la puerta al escritorio, y al decidir hacia la puerta o el área de cuarentena. */
+export function posPaciente(t: number, saliendo: boolean, reducido = false, salida: SalidaPaciente = "puerta"): Punto3D {
+  const destino = salida === "cuarentena" ? POS_CUARENTENA : POS_PUERTA;
+  if (reducido) return saliendo ? [...destino] : [0, 0, 0];
+  if (saliendo) {
+    if (t <= 0) return [0, 0, 0];
+    if (t >= DURACION_SALIDA_MS) return [...destino];
+    const avance = suavizar(t / DURACION_SALIDA_MS);
+    return [destino[0] * avance, 0, destino[2] * avance];
+  }
+  if (t >= DURACION_ENTRADA_MS) return [0, 0, 0];
+  return [0, 0, POS_PUERTA[2] * (1 - suavizar(t / DURACION_ENTRADA_MS))];
 }
 
 /** El llamador guarda avisado en una ref antes de invocar el callback. */

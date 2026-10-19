@@ -1,3 +1,4 @@
+import { EVIDENCIAS, posteriorBayes, puntosPorDecision, type Evidencia } from "./caso-bayesiano";
 import { formatearPct } from "./formula-bayes";
 import { prevalenciaDeModo, type Modo } from "./ronda";
 import {
@@ -6,17 +7,16 @@ import {
   decisionAcertada,
   frecuenciasNaturales,
   insignias,
-  puntajePartida,
   vppBayes,
   type Frecuencias,
   type Insignia,
   type Respuesta,
 } from "./stats";
 
-/** Fracción del puntaje máximo posible desde la que se festeja (8 aciertos de 10). */
+/** Fracción del puntaje máximo posible desde la que se festeja (8 decisiones óptimas de 10). */
 export const UMBRAL_PUNTAJE_ALTO = 0.8;
 
-/** Máximo posible: una decisión acertada por paciente. */
+/** Máximo posible: una decisión de mayor valor esperado por paciente. */
 export function puntajeMaximo(): number {
   return PACIENTES_POR_RONDA;
 }
@@ -27,13 +27,13 @@ const INSIGNIAS: Record<Insignia, InsigniaInfo> = {
   perfecto: {
     id: "perfecto",
     titulo: "Ronda perfecta",
-    descripcion: "Acertaste las 10 decisiones de la ronda.",
+    descripcion: "Tomaste las 10 decisiones de mayor valor esperado de la ronda.",
     icono: "smile",
   },
   "ojo-clinico": {
     id: "ojo-clinico",
     titulo: "Ojo clínico",
-    descripcion: "Acertaste 8 o 9 decisiones de la ronda.",
+    descripcion: "Tomaste 8 o 9 decisiones de mayor valor esperado de la ronda.",
     icono: "brain",
   },
   cazador: {
@@ -52,7 +52,7 @@ const INSIGNIAS: Record<Insignia, InsigniaInfo> = {
 
 export type EntradaResultado = {
   modo: Modo;
-  ronda: { orden: number; nombre: string }[];
+  ronda: { orden: number; nombre: string; evidencia?: Evidencia }[];
   respuestas: (Respuesta & { orden: number })[];
   /** Puntaje calculado por el servidor, si ya se guardó. */
   puntajeServidor?: number;
@@ -64,7 +64,10 @@ export type FilaPaciente = {
   estimacionPct: number | null;
   decision: Respuesta["decision"];
   estaba_infectado: boolean;
-  puntaje: number;
+  evidencia: Evidencia;
+  previo: number;
+  posterior: number;
+  puntos: 0 | 1;
   decisionAcertada: boolean;
 };
 
@@ -82,30 +85,35 @@ export type ResultadoCalculado = {
 };
 
 /** Todo lo que muestra /resultado; los componentes solo pintan estos valores. */
-export function calcularResultado({ modo, ronda, respuestas, puntajeServidor }: EntradaResultado): ResultadoCalculado {
+export function calcularResultado({ modo, ronda, respuestas }: EntradaResultado): ResultadoCalculado {
   const prevalencia = prevalenciaDeModo(modo);
   const vpp = vppBayes(prevalencia);
   const vppPct = vpp * 100;
-  const nombres = new Map(ronda.map((p) => [p.orden, p.nombre]));
+  const pacientes = new Map(ronda.map((p) => [p.orden, p]));
 
   const filas = respuestas.map<FilaPaciente>((r) => {
-    const acierto = decisionAcertada(r);
+    const paciente = pacientes.get(r.orden);
+    const evidencia = paciente?.evidencia ?? "sin-antecedentes";
+    const previo = EVIDENCIAS[evidencia].previo[modo];
+    const posterior = posteriorBayes(previo);
     return {
       orden: r.orden,
-      nombre: nombres.get(r.orden) ?? `Paciente ${r.orden}`,
+      nombre: paciente?.nombre ?? `Paciente ${r.orden}`,
       estimacionPct: r.estimacion_pct,
       decision: r.decision,
       estaba_infectado: r.estaba_infectado,
-      puntaje: acierto ? 1 : 0,
-      decisionAcertada: acierto,
+      evidencia,
+      previo,
+      posterior,
+      puntos: puntosPorDecision(r.decision, posterior),
+      decisionAcertada: decisionAcertada(r),
     };
   });
 
   const estimaciones = respuestas.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
-  // Las partidas antiguas conservan su puntaje de estimaciones en la base, pero
-  // aquí se presentan como aciertos. Las partidas nuevas usan el valor del servidor.
-  const puntajeTotal = estimaciones.length === 0 && puntajeServidor !== undefined
-    ? puntajeServidor : puntajePartida(respuestas, prevalencia);
+  // El puntaje del servidor puede provenir de una versión previa sin evidencia;
+  // /resultado siempre calcula la misma regla bayesiana que muestra por fila.
+  const puntajeTotal = filas.reduce((total, fila) => total + fila.puntos, 0);
   const porCada = Math.round(1 / vpp);
 
   return {
@@ -116,7 +124,7 @@ export function calcularResultado({ modo, ronda, respuestas, puntajeServidor }: 
     puntajeTotal,
     infectadosEnRonda: respuestas.filter((r) => r.estaba_infectado).length,
     frecuencias: frecuenciasNaturales(undefined, prevalencia),
-    insignias: insignias(respuestas, prevalencia).map((id) => INSIGNIAS[id]),
+    insignias: insignias(respuestas, { modo, ronda }).map((id) => INSIGNIAS[id]),
     esPuntajeAlto: puntajeTotal >= puntajeMaximo() * UMBRAL_PUNTAJE_ALTO,
     mensajeClave: `La prueba acierta ${formatearPct(SENSIBILIDAD * 100, 0)}, pero solo 1 de cada ${porCada} positivos está enfermo`,
   };

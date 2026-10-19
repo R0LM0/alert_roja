@@ -10,6 +10,7 @@ import {
   derivarAspecto,
   pasoWalk,
   posPaciente,
+  POS_CUARENTENA,
 } from "./paciente3d";
 
 describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => {
@@ -42,6 +43,56 @@ describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => 
     expect(salida.at(-1)).toBe(-3.6);
     for (let i = 1; i < salida.length; i++) expect(salida[i]).toBeLessThan(salida[i - 1]);
     expect(posPaciente(60_000, true)).toEqual([0, 0, -3.6]);
+  });
+
+  it("aislar camina a un área de cuarentena a la izquierda, nunca a la puerta", () => {
+    const inicio = posPaciente(0, true, false, "cuarentena");
+    const puerta = posPaciente(DURACION_SALIDA_MS, true, false, "puerta");
+    const destino = posPaciente(DURACION_SALIDA_MS, true, false, "cuarentena");
+    expect(inicio).toEqual([0, 0, 0]);
+    expect(destino).toEqual(POS_CUARENTENA);
+    expect(destino).not.toEqual(puerta);
+    expect(destino[0]).toBeLessThan(0);
+    expect(destino[0]).toBeGreaterThan(-1.3); // visible a la izquierda también en un encuadre estrecho
+    expect(destino[2]).toBeLessThan(-2); // zona distinta de la puerta, sin perderse detrás de la mesa
+    expect(posPaciente(60_000, true, false, "cuarentena")).toEqual(destino);
+    expect(puerta).toEqual([0, 0, -3.6]);
+
+    for (const salida of ["cuarentena", "puerta"] as const) {
+      let distanciaAnterior = 0;
+      for (const t of [0, 250, 500, 750, 1000, 1250, 1500, 1750, DURACION_SALIDA_MS]) {
+        const [x, , z] = posPaciente(t, true, false, salida);
+        const distancia = Math.hypot(x, z);
+        expect(distancia).toBeGreaterThanOrEqual(distanciaAnterior);
+        distanciaAnterior = distancia;
+      }
+      expect(fasePaciente(DURACION_SALIDA_MS - 1, true)).toBe("saliendo");
+      expect(fasePaciente(DURACION_SALIDA_MS, true)).toBe("fuera");
+    }
+  });
+
+  it("con movimiento reducido no recorre pasos: ya está fuera en el destino elegido", () => {
+    for (const salida of ["cuarentena", "puerta"] as const) {
+      const destino = posPaciente(DURACION_SALIDA_MS, true, false, salida);
+      for (const t of [0, 350, DURACION_SALIDA_MS]) {
+        expect(fasePaciente(t, true, true)).toBe("fuera");
+        expect(posPaciente(t, true, true, salida)).toEqual(destino);
+      }
+    }
+  });
+
+  it("gira gradualmente para mirar hacia cada destino mientras camina", () => {
+    for (const salida of ["cuarentena", "puerta"] as const) {
+      const [x, , z] = posPaciente(DURACION_SALIDA_MS, true, false, salida);
+      const anguloDestino = Math.atan2(x, z);
+      const anguloFinal = anguloSalida(DURACION_SALIDA_MS, salida);
+      expect(Math.cos(anguloFinal)).toBeCloseTo(Math.cos(anguloDestino));
+      expect(Math.sin(anguloFinal)).toBeCloseTo(Math.sin(anguloDestino));
+      expect(anguloSalida(0, salida)).toBe(0);
+      expect(Math.abs(anguloSalida(175, salida))).toBeGreaterThan(0);
+      expect(Math.abs(anguloSalida(175, salida))).toBeLessThan(Math.abs(anguloFinal));
+      expect(anguloSalida(350, salida)).toBeCloseTo(anguloFinal);
+    }
   });
 
   it("al remontar inicia una nueva entrada, sin reciclar el tiempo anterior", () => {

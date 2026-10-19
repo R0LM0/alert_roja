@@ -1,49 +1,44 @@
-import { Check, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
+import { EVIDENCIAS, UMBRAL_DECISION, valorEsperado } from "@/lib/caso-bayesiano";
+import { formatearPct } from "@/lib/formula-bayes";
 import type { FilaPaciente } from "@/lib/resultado";
 
 type Props = {
   total: number;
   infectadosEnRonda: number;
   filas: FilaPaciente[];
-  estimacionTexto: (pct: number) => string;
 };
 
-function Fila({ f, estimacionTexto }: { f: FilaPaciente; estimacionTexto: (pct: number) => string }) {
+const porcentaje = (probabilidad: number) => formatearPct(probabilidad * 100, 1);
+
+function Fila({ f }: { f: FilaPaciente }) {
+  const esOptima = f.puntos === 1;
+  const perdida = -valorEsperado(f.decision, f.posterior);
   return (
-    <li className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{f.orden}. {f.nombre}</span>
-        <span className="font-display text-lg font-bold tabular-nums">+{f.puntaje} acierto{f.puntaje === 1 ? "" : "s"}</span>
+    <li className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-3 text-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+        <span className="min-w-0 font-semibold break-words">{f.orden}. {f.nombre}</span>
+        <span className="font-display font-bold tabular-nums">+{f.puntos} punto{f.puntos === 1 ? "" : "s"}</span>
       </div>
-      <p className="flex items-center gap-1.5 text-sm">
-        {f.estaba_infectado ? (
-          <ShieldAlert className="size-4 shrink-0" aria-hidden="true" />
-        ) : (
-          <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-        )}
-        {f.estaba_infectado ? "Estaba infectado" : "Estaba sano"}
+      <p className="break-words">Evidencia: {EVIDENCIAS[f.evidencia].etiqueta}</p>
+      <p className="tabular-nums">Previo {porcentaje(f.previo)} → posterior {porcentaje(f.posterior)}</p>
+      <p className="text-muted">Umbral {porcentaje(UMBRAL_DECISION)}: por encima conviene aislar; si no, liberar.</p>
+      <p className="tabular-nums">
+        Elegiste {f.decision} · pérdida esperada: {perdida.toFixed(2)} unidades
       </p>
-      <p className="text-sm text-muted">
-        {f.estimacionPct !== null ? `Estimaste ${estimacionTexto(f.estimacionPct)} · ` : ""}
-        {f.decision === "aislar" ? "Aislar" : "Liberar"}
-      </p>
-      <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
-        {f.decisionAcertada ? (
-          <Check className="size-4 text-success" aria-hidden="true" />
-        ) : (
-          <X className="size-4 text-primary-text" aria-hidden="true" />
-        )}
-        {f.decisionAcertada ? "Decisión acertada (+1)" : "Decisión errada (+0)"}
+      <p className="flex items-start gap-1.5 font-semibold">
+        {esOptima ? <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" /> : <X className="mt-0.5 size-4 shrink-0 text-primary-text" aria-hidden="true" />}
+        {esOptima ? "Decisión de mayor valor esperado (+1)" : "Otra decisión tenía mayor valor esperado (+0)"}
       </p>
     </li>
   );
 }
 
-export function PuntajeResumen({ total, infectadosEnRonda, filas, estimacionTexto }: Props) {
+export function PuntajeResumen({ total, infectadosEnRonda, filas }: Props) {
   const esPuntajeAlto = filas.length === 10 && total >= 8;
-  const aislamientosAcertados = filas.filter((f) => f.decisionAcertada && f.decision === "aislar").length;
-  const liberacionesAcertadas = filas.filter((f) => f.decisionAcertada && f.decision === "liberar").length;
+  const aislamientosOptimos = filas.filter((f) => f.puntos === 1 && f.decision === "aislar").length;
+  const liberacionesOptimas = filas.filter((f) => f.puntos === 1 && f.decision === "liberar").length;
 
   return (
     <Card className="flex flex-col gap-4">
@@ -55,24 +50,22 @@ export function PuntajeResumen({ total, infectadosEnRonda, filas, estimacionText
         <p className="mt-3 font-display text-7xl font-bold tabular-nums sm:text-8xl">
           {total}<span className="text-3xl text-muted sm:text-4xl"> / {filas.length}</span>
         </p>
-        <p className="mt-2 font-semibold">decisiones acertadas</p>
-        <div className="mt-5 grid grid-cols-2 gap-3 text-left">
-          <div className="rounded-lg bg-surface p-3">
-            <p className="font-display text-2xl font-bold tabular-nums">{aislamientosAcertados}</p>
-            <p className="text-sm">aislamientos acertados</p>
+        <p className="mt-2 font-semibold">decisiones de mayor valor esperado</p>
+        <div className="mt-5 grid grid-cols-2 gap-2 text-left sm:gap-3">
+          <div className="min-w-0 rounded-lg bg-surface p-2 sm:p-3">
+            <p className="font-display text-2xl font-bold tabular-nums">{aislamientosOptimos}</p>
+            <p className="text-sm break-words">aislamientos de mayor valor esperado</p>
           </div>
-          <div className="rounded-lg bg-surface p-3">
-            <p className="font-display text-2xl font-bold tabular-nums">{liberacionesAcertadas}</p>
-            <p className="text-sm">liberaciones acertadas</p>
+          <div className="min-w-0 rounded-lg bg-surface p-2 sm:p-3">
+            <p className="font-display text-2xl font-bold tabular-nums">{liberacionesOptimas}</p>
+            <p className="text-sm break-words">liberaciones de mayor valor esperado</p>
           </div>
         </div>
         <p className="mt-4 text-sm text-muted">{infectadosEnRonda} de {filas.length} pacientes estaban infectados</p>
       </div>
       <h3 className="font-semibold">Paciente por paciente</h3>
       <ul className="flex flex-col gap-2">
-        {filas.map((f) => (
-          <Fila key={f.orden} f={f} estimacionTexto={estimacionTexto} />
-        ))}
+        {filas.map((f) => <Fila key={f.orden} f={f} />)}
       </ul>
     </Card>
   );

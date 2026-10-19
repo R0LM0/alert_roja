@@ -14,7 +14,10 @@ const resultadoSchema = z.object({
   jugador: z.string().min(1).max(20),
   modo: z.enum(["normal", "experto"]),
   ronda: z
-    .array(z.object({ orden: z.number().int(), nombre: z.string(), seed: z.string(), estaba_infectado: z.boolean() }))
+    .array(z.object({
+      orden: z.number().int(), nombre: z.string(), seed: z.string(), estaba_infectado: z.boolean(),
+      evidencia: z.enum(["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"]),
+    }))
     .length(10),
   respuestas: z.array(respuestaSchema).length(10),
   puntaje: z.number().int().optional(),

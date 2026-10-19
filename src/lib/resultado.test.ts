@@ -7,7 +7,7 @@ const estim = [33, 33, 33, 33, 33, 33, 33, 33, 33, 33];
 function entrada(over: Partial<EntradaResultado> = {}): EntradaResultado {
   return {
     modo: "normal",
-    ronda: estim.map((_, i) => ({ orden: i + 1, nombre: `P${i + 1}` })),
+    ronda: estim.map((_, i) => ({ orden: i + 1, nombre: `P${i + 1}`, evidencia: i < 3 ? "sin-antecedentes" as const : "protegido" as const })),
     respuestas: estim.map((e, i) => ({
       orden: i + 1,
       estimacion_pct: e,
@@ -19,11 +19,32 @@ function entrada(over: Partial<EntradaResultado> = {}): EntradaResultado {
 }
 
 describe("calcularResultado", () => {
+  it("lee evidencia, previo y posterior según modalidad, y puntúa valor esperado incluso si no acierta la infección", () => {
+    const ronda = [{ orden: 1, nombre: "P1", evidencia: "protegido" as const }, { orden: 2, nombre: "P2", evidencia: "contacto" as const }];
+    const respuestas = [
+      { orden: 1, estimacion_pct: null, decision: "liberar" as const, estaba_infectado: true },
+      { orden: 2, estimacion_pct: null, decision: "aislar" as const, estaba_infectado: false },
+    ];
+    const normal = calcularResultado(entrada({ ronda, respuestas, puntajeServidor: 0 }));
+    expect(normal.filas[0]).toMatchObject({ evidencia: "protegido", previo: 0.04, puntos: 1, decisionAcertada: false });
+    expect(normal.filas[0].posterior).toBeCloseTo(0.036 / 0.228);
+    expect(normal.filas[1]).toMatchObject({ evidencia: "contacto", previo: 0.25, puntos: 1, decisionAcertada: false });
+    expect(normal.puntajeTotal).toBe(2);
+    const experto = calcularResultado(entrada({ modo: "experto", ronda, respuestas }));
+    expect(experto.filas[1]).toMatchObject({ evidencia: "contacto", previo: 0.05, puntos: 0 });
+    expect(experto.filas[1].posterior).toBeCloseTo(0.045 / 0.235);
+    expect(experto.puntajeTotal).toBe(1);
+  });
+
+  it("ronda legacy sin evidencia usa sin antecedentes y no falla", () => {
+    const r = calcularResultado(entrada({ ronda: [{ orden: 1, nombre: "P1" }], respuestas: [entrada().respuestas[0]] }));
+    expect(r.filas[0]).toMatchObject({ evidencia: "sin-antecedentes", previo: 0.1, puntos: 1 });
+  });
   it("reutiliza stats.ts para el puntaje total", () => {
     const e = entrada();
     const r = calcularResultado(e);
-    expect(r.puntajeTotal).toBe(puntajePartida(e.respuestas, 0.1));
-    expect(r.filas.reduce((a, f) => a + f.puntaje, 0)).toBe(r.puntajeTotal);
+    expect(r.puntajeTotal).toBe(puntajePartida(e.respuestas, { modo: e.modo, ronda: e.ronda }));
+    expect(r.filas.reduce((a, f) => a + f.puntos, 0)).toBe(r.puntajeTotal);
     expect(r.infectadosEnRonda).toBe(3);
     expect(r.vppTeoricoPct).toBeCloseTo(vppBayes(0.1) * 100, 6);
     expect(r.estimacionPromedioPct).toBe(33);
@@ -31,12 +52,12 @@ describe("calcularResultado", () => {
 
   it("filas con desglose", () => {
     const f = calcularResultado(entrada()).filas[0];
-    expect(f).toMatchObject({ orden: 1, nombre: "P1", estimacionPct: 33, decisionAcertada: true, puntaje: 1 });
+    expect(f).toMatchObject({ orden: 1, nombre: "P1", estimacionPct: 33, decisionAcertada: true, puntos: 1 });
     const mal = calcularResultado(
       entrada({ respuestas: entrada().respuestas.map((x) => ({ ...x, decision: "aislar" as const })) }),
     ).filas[5];
     expect(mal.decisionAcertada).toBe(false);
-    expect(mal.puntaje).toBe(0);
+    expect(mal.puntos).toBe(0);
   });
 
   it("muestra aciertos sin intuición cuando toda la ronda carece de estimación", () => {
@@ -44,15 +65,13 @@ describe("calcularResultado", () => {
     const r = calcularResultado(e);
     expect(r.puntajeTotal).toBe(10);
     expect(r.estimacionPromedioPct).toBeNull();
-    expect(r.filas[0]).toMatchObject({ estimacionPct: null, puntaje: 1 });
-    expect(r.filas.every((f) => f.puntaje === 1)).toBe(true);
+    expect(r.filas[0]).toMatchObject({ estimacionPct: null, puntos: 1 });
+    expect(r.filas.every((f) => f.puntos === 1)).toBe(true);
   });
 
-  it("usa el puntaje del servidor actual y no presenta el puntaje histórico como aciertos", () => {
-    const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
-    expect(calcularResultado({ ...nueva, puntajeServidor: 8 }).puntajeTotal).toBe(8);
+  it("no usa un puntaje del servidor desfasado respecto a la evidencia", () => {
+    expect(calcularResultado(entrada({ puntajeServidor: 0 })).puntajeTotal).toBe(10);
     expect(calcularResultado(entrada({ puntajeServidor: 777 })).puntajeTotal).toBe(10);
-    expect(calcularResultado(entrada({ puntajeServidor: 5 })).puntajeTotal).toBe(10);
   });
 
   it("10/10 sin estimaciones gana perfecto y cazador si aisló a todos los infectados", () => {
@@ -63,7 +82,7 @@ describe("calcularResultado", () => {
     expect(r.insignias.some((i) => i.id === "bayesiano-nato")).toBe(false);
   });
 
-  it("8 o 9 aciertos ganan ojo clínico, pero 7 no gana insignias de puntaje", () => {
+  it("8 o 9 decisiones óptimas ganan ojo clínico, pero 7 no gana insignias de puntaje", () => {
     const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     const conErrores = (n: number) => calcularResultado({
       ...nueva,
@@ -86,12 +105,11 @@ describe("calcularResultado", () => {
     expect(r.esPuntajeAlto).toBe(false);
   });
 
-  it("puntaje alto comienza en 8 de 10 aciertos", () => {
+  it("puntaje alto comienza en 8 de 10 decisiones óptimas", () => {
     expect(puntajeMaximo()).toBe(10);
     expect(UMBRAL_PUNTAJE_ALTO).toBe(0.8);
     const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     expect(calcularResultado({ ...nueva, puntajeServidor: 8 }).esPuntajeAlto).toBe(true);
-    expect(calcularResultado({ ...nueva, puntajeServidor: 7 }).esPuntajeAlto).toBe(false);
     const conErrores = (n: number) => calcularResultado({
       ...nueva,
       respuestas: nueva.respuestas.map((r, i) => i < n ? { ...r, decision: "liberar" as const } : r),

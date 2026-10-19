@@ -1,3 +1,5 @@
+import { EVIDENCIAS, posteriorBayes, puntosPorDecision, type Evidencia, type ModalidadCaso } from "./caso-bayesiano";
+
 /** Parámetros del escenario (catálogo, juegos 24 y 39). */
 export const PREVALENCIA = 0.1;
 export const SENSIBILIDAD = 0.9;
@@ -105,19 +107,30 @@ export function decisionAcertada(r: Respuesta): boolean {
   return (r.decision === "aislar") === r.estaba_infectado;
 }
 
-/** Un acierto por paciente correctamente aislado o liberado. */
-export function puntajePartida(rs: Respuesta[], _prev = PREVALENCIA): number {
-  return rs.filter(decisionAcertada).length;
+type ContextoDecision = {
+  modo: ModalidadCaso;
+  ronda: readonly { orden: number; evidencia?: Evidencia }[];
+};
+
+/** Una evidencia ausente (filas antiguas) usa sin antecedentes. El argumento numérico sigue admitiendo llamadas legacy. */
+export function puntajePartida(rs: Respuesta[], contexto: ContextoDecision | number = PREVALENCIA): number {
+  const modo = typeof contexto === "number" ? (contexto === PREVALENCIA_EXPERTO ? "experto" : "normal") : contexto.modo;
+  const porOrden = typeof contexto === "number" ? null : new Map(contexto.ronda.map((p) => [p.orden, p.evidencia]));
+  return rs.reduce((total, r, i) => {
+    const orden = "orden" in r && typeof r.orden === "number" ? r.orden : i + 1;
+    const evidencia = porOrden?.get(orden) ?? "sin-antecedentes";
+    return total + puntosPorDecision(r.decision, posteriorBayes(EVIDENCIAS[evidencia].previo[modo]));
+  }, 0);
 }
 
 export type Insignia = "perfecto" | "ojo-clinico" | "cazador" | "bayesiano-nato";
 
 /** Insignias de decisión para rondas completas; la de estimación sobrevive solo en filas legacy. */
-export function insignias(rs: Respuesta[], _prev = PREVALENCIA): Insignia[] {
+export function insignias(rs: Respuesta[], contexto: ContextoDecision | number = PREVALENCIA): Insignia[] {
   if (rs.length === 0) return [];
   const out: Insignia[] = [];
   if (rs.length === PACIENTES_POR_RONDA) {
-    const aciertos = puntajePartida(rs);
+    const aciertos = puntajePartida(rs, contexto);
     if (aciertos === PACIENTES_POR_RONDA) out.push("perfecto");
     else if (aciertos >= 8) out.push("ojo-clinico");
     const infectados = rs.filter((r) => r.estaba_infectado);

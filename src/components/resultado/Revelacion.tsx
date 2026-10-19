@@ -27,7 +27,6 @@ import { VeredictoCiudad } from "./VeredictoCiudad";
 const RETARDO_TABLA_MS = 2200;
 const RETARDO_CIERRE_MS = 4600;
 
-const pctEntero = (pct: number) => formatearPct(pct, 0);
 const pctLegible = (pct: number) => formatearPct(pct, pct < 10 ? 1 : 0);
 
 function SinResultado() {
@@ -123,7 +122,6 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
           total={calculo.puntajeTotal}
           infectadosEnRonda={calculo.infectadosEnRonda}
           filas={calculo.filas}
-          estimacionTexto={pctEntero}
         />
       </Aparece>
       <Aparece orden={4}>
