@@ -90,9 +90,11 @@ test("una ronda completa en el celular: de la portada a la revelación", async (
   // Revelación.
   await expect(page.getByText("La prueba acierta 90 %, pero solo 1 de cada 3 positivos está enfermo")).toBeVisible();
   await expect(page.getByText(/Tu intuición:/)).toHaveCount(0);
-  // El puntaje se pinta como "8 / 10" con el rótulo de decisiones acertadas.
-  await expect(page.getByText(new RegExp(`^${PUNTAJE_SIMULADO}\\s*/\\s*${PACIENTES}$`))).toBeVisible();
-  await expect(page.getByText("decisiones acertadas")).toBeVisible();
+  // El puntaje ya no es el que devuelve el servidor: la UI muestra el calculado
+  // por valor esperado (depende de la ronda y de las decisiones), así que se
+  // asertan la forma del marcador y el rótulo, no el número del mock.
+  await expect(page.getByText(/^\d+\s*\/\s*10$/)).toBeVisible();
+  await expect(page.getByText("decisiones de mayor valor esperado")).toBeVisible();
   await expect(page.getByText("La fórmula de Bayes, paso a paso")).toBeVisible();
 
   const tabla = page.getByRole("table", { name: /Tabla 2x2/ });

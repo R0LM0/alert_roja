@@ -38,6 +38,7 @@ function armar(liberarInfectado: boolean) {
   const respuestas = ronda.map((r) => ({
     orden: r.orden,
     estimacion_pct: null,
+    evidencia: r.evidencia,
     decision: r.estaba_infectado ? (liberarInfectado && r.orden === 3 ? "liberar" : "aislar") : "liberar",
     estaba_infectado: r.estaba_infectado,
     tiempo_ms: 3000,
