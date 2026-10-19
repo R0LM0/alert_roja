@@ -8,7 +8,7 @@ export const EVIDENCIAS: Record<Evidencia, { etiqueta: string; previo: Record<Mo
   contacto: { etiqueta: "Contacto estrecho", previo: { normal: 0.25, experto: 0.05 } },
   sintomas: { etiqueta: "Síntomas compatibles", previo: { normal: 0.18, experto: 0.03 } },
   "sin-antecedentes": { etiqueta: "Sin antecedentes", previo: { normal: 0.1, experto: 0.01 } },
-  protegido: { etiqueta: "Protegido (vacunado o con barbijo)", previo: { normal: 0.04, experto: 0.005 } },
+  protegido: { etiqueta: "Protegido (vacunado o con mascarilla)", previo: { normal: 0.04, experto: 0.005 } },
 };
 
 export const COSTO_AISLAR_SANO = 1;

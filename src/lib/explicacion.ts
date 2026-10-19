@@ -9,7 +9,7 @@ const FRASE_EVIDENCIA: Record<Evidencia, string> = {
   contacto: "Con contacto estrecho",
   sintomas: "Con síntomas compatibles",
   "sin-antecedentes": "Sin antecedentes",
-  protegido: "Con protección (vacunado o barbijo)",
+  protegido: "Con protección (vacunado o con mascarilla)",
 };
 
 export type Accion = "aislar" | "liberar";
@@ -40,7 +40,7 @@ export function explicacionPaciente(f: FilaPaciente): ExplicacionPaciente {
     optima,
     acerto,
     infectado: f.estaba_infectado,
-    razon: `${FRASE_EVIDENCIA[f.evidencia]}, la probabilidad sube a ${posterior}, ${conclusion}`,
+    razon: `${FRASE_EVIDENCIA[f.evidencia]}, la probabilidad de estar infectado queda en ${posterior}, ${conclusion}`,
   };
 }
 

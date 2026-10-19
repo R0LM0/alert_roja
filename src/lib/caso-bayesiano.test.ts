@@ -42,7 +42,7 @@ const tabla: Array<{
     experto: { previo: 0.01, posterior: 0.043478, accion: "liberar" },
   },
   {
-    evidencia: "protegido", etiqueta: "Protegido (vacunado o con barbijo)",
+    evidencia: "protegido", etiqueta: "Protegido (vacunado o con mascarilla)",
     normal: { previo: 0.04, posterior: 0.157895, accion: "liberar" },
     experto: { previo: 0.005, posterior: 0.022113, accion: "liberar" },
   },

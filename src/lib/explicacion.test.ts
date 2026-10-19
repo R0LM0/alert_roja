@@ -28,23 +28,23 @@ describe("explicacionFrecuencias", () => {
 });
 
 describe("explicacionPaciente", () => {
-  it("acierto con síntomas: sube a 49,7 % y convenía aislar", () => {
+  it("acierto con síntomas: queda en 49,7 % y convenía aislar", () => {
     const e = explicacionPaciente(fila({ evidencia: "sintomas", previo: 0.18, posterior: 0.4969, decision: "aislar", estaba_infectado: true }));
     expect(e.acerto).toBe(true);
     expect(e.optima).toBe("aislar");
     expect(e.infectado).toBe(true);
     expect(e.etiquetaEvidencia).toBe("Síntomas compatibles");
-    expect(e.razon).toBe("Con síntomas compatibles, la probabilidad sube a 49,7 %, convenía aislar.");
+    expect(e.razon).toBe("Con síntomas compatibles, la probabilidad de estar infectado queda en 49,7 %, convenía aislar.");
   });
   it("error: liberó a un paciente con conviviente y convenía aislar", () => {
     const e = explicacionPaciente(fila({ evidencia: "conviviente", previo: 0.1, posterior: 0.3333, decision: "liberar", estaba_infectado: true }));
     expect(e.acerto).toBe(false);
-    expect(e.razon).toBe("Con un conviviente con caso, la probabilidad sube a 33,3 %, convenía aislar, no liberar.");
+    expect(e.razon).toBe("Con un conviviente con caso, la probabilidad de estar infectado queda en 33,3 %, convenía aislar, no liberar.");
   });
   it("posterior bajo el umbral: convenía liberar", () => {
     const e = explicacionPaciente(fila({ evidencia: "protegido", previo: 0.04, posterior: 0.1579, decision: "aislar", estaba_infectado: false }));
     expect(e.optima).toBe("liberar");
     expect(e.acerto).toBe(false);
-    expect(e.razon).toBe("Con protección (vacunado o barbijo), la probabilidad sube a 15,8 %, convenía liberar, no aislar.");
+    expect(e.razon).toBe("Con protección (vacunado o con mascarilla), la probabilidad de estar infectado queda en 15,8 %, convenía liberar, no aislar.");
   });
 });
