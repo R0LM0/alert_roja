@@ -5,33 +5,49 @@ import JSZip from "jszip";
  * añaden a mano las partes OOXML al zip ya generado: chartN, drawingN, rels, hoja y content types.
  */
 
+/** Una serie de barras: sus valores están en `colValores`, con nombre en la celda (filaSerie, colSerie). */
+export type SerieGrafico = {
+  nombre: string;
+  /** Celda (1 = A) del encabezado de la serie. */
+  filaSerie: number;
+  colSerie: number;
+  /** Columna (1 = A) de los valores; las filas son las de ConfigGrafico. */
+  colValores: number;
+  /** Valores en caché, para visores que no recalculan. */
+  valores: number[];
+  color: string;
+  /** Índice (0-based) de la barra resaltada en negro, o null. */
+  indiceMarcado: number | null;
+};
+
 export type ConfigGrafico = {
   /** Nombre de la hoja donde están los datos y donde se coloca el gráfico. */
   hoja: string;
   titulo: string;
   tituloEjeX: string;
   tituloEjeY: string;
-  nombreSerie: string;
-  /** Celda (1 = A) del encabezado de la serie. */
-  filaSerie: number;
-  colSerie: number;
-  /** Rango de datos: filas primera..ultima (1-based), columnas de categorías y de valores (1 = A). */
+  /** Rango de categorías y de datos: filas primera..ultima (1-based), columna de categorías (1 = A). */
   primeraFila: number;
   ultimaFila: number;
   colCategorias: number;
-  colValores: number;
-  /** Valores en caché, para visores que no recalculan. */
   categorias: string[];
-  valores: number[];
-  /** Índice (0-based) de la barra resaltada, o null. */
-  indiceMarcado: number | null;
+  series: SerieGrafico[];
+  /** Formato del eje de valores y de las etiquetas (Excel). Por defecto "0" y "General". */
+  formatoEjeY?: string;
+  formatoEtiquetas?: string;
+  /** Máximo fijo del eje de valores (p. ej. 1 para fracciones). */
+  maxEjeY?: number;
   /** Celdas 0-based; `hasta` es exclusivo. */
   desde: { col: number; fila: number };
   hasta: { col: number; fila: number };
 };
 
-const COLOR_BARRA = "DC2626";
-const COLOR_MARCADA = "18181B";
+/** Colores de la paleta: rojo de acento, gris oscuro para lo óptimo, gris claro para lo demás. */
+export const COLOR_ROJO_GRAFICO = "DC2626";
+export const COLOR_OSCURO_GRAFICO = "18181B";
+export const COLOR_GRIS_GRAFICO = "A1A1AA";
+const COLOR_BARRA = COLOR_ROJO_GRAFICO;
+const COLOR_MARCADA = COLOR_OSCURO_GRAFICO;
 
 const NS_C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -78,19 +94,40 @@ function tituloXml(texto: string, tam: number, negrita: boolean): string {
 
 const relleno = (hex: string) => `<c:spPr><a:solidFill><a:srgbClr val="${hex}"/></a:solidFill></c:spPr>`;
 
-/** Orden de hijos según el esquema CT_BarSer / CT_CatAx / CT_ValAx (Excel es estricto con él). */
-export function chartXml(g: ConfigGrafico): string {
+/** Serie de barras (orden de hijos según CT_BarSer; Excel es estricto con él). */
+function serieXml(g: ConfigGrafico, s: SerieGrafico, idx: number): string {
   const n = g.categorias.length;
   const cat = refRango(g.hoja, g.colCategorias, g.primeraFila, g.ultimaFila);
-  const val = refRango(g.hoja, g.colValores, g.primeraFila, g.ultimaFila);
-  const serie = `${nombreHojaRef(g.hoja)}!$${letraColumna(g.colSerie)}$${g.filaSerie}`;
+  const val = refRango(g.hoja, s.colValores, g.primeraFila, g.ultimaFila);
+  const nombre = `${nombreHojaRef(g.hoja)}!$${letraColumna(s.colSerie)}$${s.filaSerie}`;
   const puntos = (xs: (string | number)[]) =>
     xs.map((x, i) => `<c:pt idx="${i}"><c:v>${esc(String(x))}</c:v></c:pt>`).join("");
   const marcada =
-    g.indiceMarcado === null
+    s.indiceMarcado === null
       ? ""
-      : `<c:dPt><c:idx val="${g.indiceMarcado}"/><c:invertIfNegative val="0"/><c:bubble3D val="0"/>${relleno(COLOR_MARCADA)}</c:dPt>`;
+      : `<c:dPt><c:idx val="${s.indiceMarcado}"/><c:invertIfNegative val="0"/><c:bubble3D val="0"/>${relleno(COLOR_MARCADA)}</c:dPt>`;
+  const formato = esc(g.formatoEtiquetas ?? "General");
+  return (
+    `<c:ser><c:idx val="${idx}"/><c:order val="${idx}"/>` +
+    `<c:tx><c:strRef><c:f>${esc(nombre)}</c:f><c:strCache><c:ptCount val="1"/>${puntos([s.nombre])}</c:strCache></c:strRef></c:tx>` +
+    `${relleno(s.color)}<c:invertIfNegative val="0"/>${marcada}` +
+    `<c:dLbls><c:numFmt formatCode="${formato}" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` +
+    `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1"/></a:pPr><a:endParaRPr lang="es-NI"/></a:p></c:txPr>` +
+    `<c:dLblPos val="outEnd"/><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>` +
+    `<c:cat><c:strRef><c:f>${esc(cat)}</c:f><c:strCache><c:ptCount val="${n}"/>${puntos(g.categorias)}</c:strCache></c:strRef></c:cat>` +
+    `<c:val><c:numRef><c:f>${esc(val)}</c:f><c:numCache><c:formatCode>${formato}</c:formatCode><c:ptCount val="${n}"/>${puntos(s.valores)}</c:numCache></c:numRef></c:val>` +
+    `</c:ser>`
+  );
+}
 
+/** Gráfico de columnas agrupadas (una o varias series) con títulos, ejes y etiquetas de valor. */
+export function chartXml(g: ConfigGrafico): string {
+  const formatoEje = esc(g.formatoEjeY ?? "0");
+  const maximo = g.maxEjeY === undefined ? "" : `<c:max val="${g.maxEjeY}"/>`;
+  const leyenda =
+    g.series.length > 1
+      ? `<c:legend><c:legendPos val="b"/><c:overlay val="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr><a:endParaRPr lang="es-NI"/></a:p></c:txPr></c:legend>`
+      : "";
   return (
     XML_DECL +
     `<c:chartSpace xmlns:c="${NS_C}" xmlns:a="${NS_A}" xmlns:r="${NS_R}">` +
@@ -98,24 +135,16 @@ export function chartXml(g: ConfigGrafico): string {
     `<c:chart>${tituloXml(g.titulo, 1400, true)}<c:autoTitleDeleted val="0"/>` +
     `<c:plotArea><c:layout/>` +
     `<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>` +
-    `<c:ser><c:idx val="0"/><c:order val="0"/>` +
-    `<c:tx><c:strRef><c:f>${esc(serie)}</c:f><c:strCache><c:ptCount val="1"/>${puntos([g.nombreSerie])}</c:strCache></c:strRef></c:tx>` +
-    `${relleno(COLOR_BARRA)}<c:invertIfNegative val="0"/>${marcada}` +
-    `<c:dLbls><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` +
-    `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1"/></a:pPr><a:endParaRPr lang="es-NI"/></a:p></c:txPr>` +
-    `<c:dLblPos val="outEnd"/><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>` +
-    `<c:cat><c:strRef><c:f>${esc(cat)}</c:f><c:strCache><c:ptCount val="${n}"/>${puntos(g.categorias)}</c:strCache></c:strRef></c:cat>` +
-    `<c:val><c:numRef><c:f>${esc(val)}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${n}"/>${puntos(g.valores)}</c:numCache></c:numRef></c:val>` +
-    `</c:ser>` +
+    g.series.map((s, i) => serieXml(g, s, i)).join("") +
     `<c:gapWidth val="60"/><c:axId val="111111111"/><c:axId val="222222222"/></c:barChart>` +
     `<c:catAx><c:axId val="111111111"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/>` +
     `${tituloXml(g.tituloEjeX, 1000, false)}<c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>` +
     `<c:crossAx val="222222222"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>` +
-    `<c:valAx><c:axId val="222222222"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/>` +
+    `<c:valAx><c:axId val="222222222"/><c:scaling><c:orientation val="minMax"/>${maximo}<c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/>` +
     `<c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E4E4E7"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>` +
-    `${tituloXml(g.tituloEjeY, 1000, false)}<c:numFmt formatCode="0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>` +
+    `${tituloXml(g.tituloEjeY, 1000, false)}<c:numFmt formatCode="${formatoEje}" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>` +
     `<c:crossAx val="111111111"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>` +
-    `</c:plotArea><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>` +
+    `</c:plotArea>${leyenda}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>` +
     `<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="D4D4D8"/></a:solidFill></a:ln></c:spPr>` +
     `</c:chartSpace>`
   );

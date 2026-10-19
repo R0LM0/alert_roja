@@ -2,41 +2,52 @@ import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { SaxesParser } from "saxes";
 import { describe, expect, it, vi } from "vitest";
-import { agregarGraficosHistograma, agregarGraficosSeguro, chartXml } from "./export-grafico";
+import { construirDificultad } from "./export-datos";
+import { agregarGraficosHistograma, agregarGraficosSeguro, chartXml, type ConfigGrafico } from "./export-grafico";
 import {
   configsGraficos,
+  configsHistograma,
   generarXlsx,
   generarXlsxConGraficos,
   notaHistograma,
   ubicacionHistograma,
   type DatosExport,
-  type DificultadExport,
+  type FilaRespuestaExport,
 } from "./export-xlsx";
-import { construirHistograma } from "./ranking";
-import { vppBayes } from "./stats";
+import { armarPodio } from "./podio";
+import { PREVALENCIA, PREVALENCIA_EXPERTO, vppBayes } from "./stats";
 
-function dificultad(prevalencia: number, nombre: string, estimaciones: number[]): DificultadExport {
-  return {
+/** Respuestas de primer intento con estimación antigua: reproducen el histograma de la prueba. */
+function estimadas(estimaciones: number[], prevalencia: number): FilaRespuestaExport[] {
+  return estimaciones.map((estimacionPct, i) => ({
+    partidaId: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+    creadaEn: new Date("2026-10-20T15:00:00Z"),
+    jugador: `J${i}`,
     prevalencia,
-    nombre,
-    partidas: estimaciones.length,
-    jugadores: estimaciones.length,
-    estimacionPromedioPct: 40,
-    vppObservadoPct: 30,
-    vppTeoricoPct: vppBayes(prevalencia) * 100,
-    pctSobreestiman: 70,
-    histograma: construirHistograma(estimaciones),
-    ranking: [],
-  };
+    puntaje: 5,
+    tiempoTotalMs: 60_000,
+    primerIntento: true,
+    enInforme: true,
+    orden: 1,
+    evidencia: "conviviente",
+    estimacionPct,
+    decision: "aislar",
+    estabaInfectado: true,
+    tiempoMs: 5_000,
+  }));
 }
 
+const respuestasNormal = estimadas([5, 35, 35, 60, 80, 90, 90, 90], PREVALENCIA);
 const datos: DatosExport = {
   generadoEn: new Date("2026-05-02T12:00:00Z"),
-  respuestas: [],
+  cierre: null,
+  hayEstimaciones: true,
   dificultades: [
-    dificultad(0.1, "Normal", [5, 35, 35, 60, 80, 90, 90, 90]),
-    dificultad(0.01, "Experto", [2, 5, 20, 60, 100]),
+    construirDificultad(PREVALENCIA, "Normal", respuestasNormal, [], null),
+    construirDificultad(PREVALENCIA_EXPERTO, "Experto", estimadas([2, 5, 20, 60, 100], PREVALENCIA_EXPERTO), [], null),
   ],
+  podio: armarPodio([]),
+  respuestas: respuestasNormal,
 };
 
 function esBienFormado(xml: string) {
@@ -130,7 +141,15 @@ describe("agregarGraficosHistograma", () => {
     const { final } = await generar();
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(final as unknown as ExcelJS.Buffer);
-    expect(wb.worksheets.map((w) => w.name)).toEqual(["Resumen", "Ranking", "Histograma", "Respuestas"]);
+    expect(wb.worksheets.map((w) => w.name)).toEqual([
+      "Portada",
+      "Explicación",
+      "Decisiones",
+      "Ranking",
+      "Podio",
+      "Respuestas",
+      "Histograma",
+    ]);
     const ws = wb.getWorksheet("Histograma")!;
     const u = ubicacionHistograma(0);
     expect(ws.getCell(u.primeraFila, u.colRango).value).toBe("0–9");
@@ -146,9 +165,77 @@ describe("agregarGraficosHistograma", () => {
   });
 });
 
-describe("generarXlsxConGraficos y fallback", () => {
-  it("incluye ambos gráficos por defecto", async () => {
+describe("gráfico de decisiones (dos series)", () => {
+  const config: ConfigGrafico = {
+    hoja: "Decisiones",
+    titulo: "Normal: público frente a óptimo",
+    tituloEjeX: "Evidencia",
+    tituloEjeY: "Porcentaje de pacientes",
+    primeraFila: 6,
+    ultimaFila: 8,
+    colCategorias: 1,
+    categorias: ["Conviviente con caso", "Contacto estrecho", "Sin antecedentes"],
+    series: [
+      { nombre: "% que aisló el público", filaSerie: 5, colSerie: 3, colValores: 3, valores: [1, 0.5, 0], color: "DC2626", indiceMarcado: null },
+      { nombre: "% que debería aislarse (óptimo)", filaSerie: 5, colSerie: 8, colValores: 8, valores: [1, 1, 0], color: "18181B", indiceMarcado: null },
+    ],
+    formatoEjeY: "0%",
+    formatoEtiquetas: "0%",
+    maxEjeY: 1,
+    desde: { col: 9, fila: 3 },
+    hasta: { col: 18, fila: 21 },
+  };
+
+  it("dos series con sus referencias, leyenda, formato porcentual y eje fijo a 100 %", () => {
+    const xml = chartXml(config);
+    expect(xml.match(/<c:ser>/g)).toHaveLength(2);
+    expect(xml).toContain("<c:f>Decisiones!$C$6:$C$8</c:f>");
+    expect(xml).toContain("<c:f>Decisiones!$H$6:$H$8</c:f>");
+    expect(xml).toContain("<c:f>Decisiones!$C$5</c:f>");
+    expect(xml).toContain("<c:legend>");
+    expect(xml).toContain('<c:numFmt formatCode="0%" sourceLinked="0"/>');
+    expect(xml).toContain('<c:max val="1"/>');
+    expect(xml).toContain("% que debería aislarse (óptimo)");
+    expect(esBienFormado(xml)).toBeNull();
+  });
+
+  it("una sola serie no lleva leyenda", () => {
+    expect(chartXml({ ...config, series: [config.series[0]] })).not.toContain("<c:legend>");
+  });
+
+  it("el libro incorpora las dos gráficas de decisiones en la hoja Decisiones", async () => {
     const zip = await JSZip.loadAsync(await generarXlsxConGraficos(datos));
+    const wb = await texto(zip, "xl/workbook.xml");
+    const rid = /<sheet\b[^>]*name="Decisiones"[^>]*r:id="(rId\d+)"/.exec(wb)![1];
+    const rels = await texto(zip, "xl/_rels/workbook.xml.rels");
+    const destino = new RegExp(`<Relationship\\b[^>]*Id="${rid}"[^>]*Target="([^"]+)"`).exec(rels) ??
+      new RegExp(`<Relationship\\b[^>]*Target="([^"]+)"[^>]*Id="${rid}"`).exec(rels);
+    const rutaSheet = `xl/${destino![1].replace(/^\/?(xl\/)?/, "")}`;
+    const relsHoja = await texto(zip, rutaSheet.replace(/([^/]+)$/, "_rels/$1.rels"));
+    const dibujo = /Target="\.\.\/drawings\/(drawing\d+\.xml)"/.exec(relsHoja)![1];
+    const relsDibujo = await texto(zip, `xl/drawings/_rels/${dibujo}.rels`);
+    expect(relsDibujo.match(/charts\/chart\d+\.xml/g)).toHaveLength(2);
+  });
+});
+
+describe("generarXlsxConGraficos y fallback", () => {
+  it("incluye los gráficos del histograma y los de decisiones", async () => {
+    const zip = await JSZip.loadAsync(await generarXlsxConGraficos(datos));
+    expect(Object.keys(zip.files).filter((r) => /^xl\/charts\/chart\d+\.xml$/.test(r))).toHaveLength(4);
+  });
+
+  it("sin estimaciones solo quedan los dos gráficos de decisiones", async () => {
+    const sinEstimaciones: DatosExport = {
+      ...datos,
+      hayEstimaciones: false,
+      dificultades: [
+        construirDificultad(PREVALENCIA, "Normal", [], [], null),
+        construirDificultad(PREVALENCIA_EXPERTO, "Experto", [], [], null),
+      ],
+    };
+    expect(configsHistograma(sinEstimaciones)).toEqual([]);
+    expect(configsGraficos(sinEstimaciones)).toHaveLength(2);
+    const zip = await JSZip.loadAsync(await generarXlsxConGraficos(sinEstimaciones));
     expect(Object.keys(zip.files).filter((r) => /^xl\/charts\/chart\d+\.xml$/.test(r))).toHaveLength(2);
   });
 
