@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { FaseCiudad } from "@/lib/ciudad-layout";
 import { festejar } from "@/lib/confeti";
+import { explicacionFrecuencias } from "@/lib/explicacion";
 import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
 import { resolverInsignias } from "@/lib/insignias";
@@ -21,7 +22,10 @@ import { ComparacionIntuicion } from "./ComparacionIntuicion";
 import { FormulaBayes } from "./FormulaBayes";
 import { HistorialInsignias, Insignias } from "./Insignias";
 import { MensajeClave } from "./MensajeClave";
+import { PorQuePasoEsto } from "./PorQuePasoEsto";
 import { PuntajeResumen } from "./PuntajeResumen";
+import { RevisionPacientes } from "./RevisionPacientes";
+import { SabiasQue } from "./SabiasQue";
 import { VeredictoCiudad } from "./VeredictoCiudad";
 
 /** Pausas de la secuencia: ver la ciudad mezclada, reagrupar y, al final, celebrar. */
@@ -58,6 +62,7 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
     [modo, resultado],
   );
   const pasos = useMemo(() => pasosBayes(prevalenciaDeModo(modo)), [modo]);
+  const porQue = useMemo(() => explicacionFrecuencias(modo), [modo]);
   const [historial, setHistorial] = useState<InsigniaGuardada[]>([]);
   const insigniasHistorial = useMemo(() => resolverInsignias(historial.map((i) => i.id)), [historial]);
   useEffect(() => {
@@ -134,6 +139,9 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
         />
       </Aparece>
       <Aparece orden={4}>
+        <RevisionPacientes filas={calculo.filas} />
+      </Aparece>
+      <Aparece orden={4}>
         <Insignias insignias={calculo.insignias} />
       </Aparece>
       {insigniasHistorial.length > 0 ? (
@@ -145,9 +153,15 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
         <MensajeClave mensaje={calculo.mensajeClave} />
       </Aparece>
       <Aparece orden={6}>
-        <FormulaBayes pasos={pasos} />
+        <PorQuePasoEsto explicacion={porQue} infectadosEnRonda={calculo.infectadosEnRonda} total={calculo.filas.length} />
       </Aparece>
       <Aparece orden={7}>
+        <FormulaBayes pasos={pasos} />
+      </Aparece>
+      <Aparece orden={8}>
+        <SabiasQue />
+      </Aparece>
+      <Aparece orden={9}>
         <AccionesResultado
           modo={modo}
           guardado={resultado.estado === "guardado"}
