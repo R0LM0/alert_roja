@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IDS_INSIGNIAS, medallasInsignias, resolverInsignias } from "./insignias";
+import { formatearFechaInsignia, IDS_INSIGNIAS, medallasInsignias, resolverInsignias } from "./insignias";
 import { informacionInsignias } from "./ranking";
 
 describe("catálogo de insignias", () => {
@@ -36,6 +36,25 @@ describe("medallasInsignias", () => {
 
   it("ignora ids que ya no están en el catálogo", () => {
     expect(medallasInsignias(["retirada"]).some((m) => m.ganada)).toBe(false);
+  });
+
+  it("añade la fecha solo a las ganadas que la tienen", () => {
+    const medallas = medallasInsignias(["rayo", "perfecto"], { rayo: "2026-10-19T10:00:00.000Z", cazador: "2026-10-01T00:00:00.000Z" });
+    expect(medallas.find((m) => m.info.id === "rayo")?.fecha).toBe("2026-10-19T10:00:00.000Z");
+    expect(medallas.find((m) => m.info.id === "perfecto")?.fecha).toBeUndefined();
+    expect(medallas.find((m) => m.info.id === "cazador")?.fecha).toBeUndefined();
+  });
+});
+
+describe("formatearFechaInsignia", () => {
+  it("escribe la fecha en español de Nicaragua, en hora de Managua", () => {
+    // 03:00 UTC del 19 todavía es 18 en Managua (UTC−6).
+    expect(formatearFechaInsignia("2026-10-19T03:00:00.000Z")).toBe("18 de octubre de 2026");
+    expect(formatearFechaInsignia("2026-10-19T10:00:00.000Z")).toBe("19 de octubre de 2026");
+  });
+
+  it("devuelve cadena vacía con una fecha inválida", () => {
+    expect(formatearFechaInsignia("no es fecha")).toBe("");
   });
 });
 

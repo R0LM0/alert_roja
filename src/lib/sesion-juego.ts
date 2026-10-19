@@ -86,6 +86,15 @@ export function leerInsignias(jugador: string, almacen: AlmacenTexto | null = lo
   }
 }
 
+/** Apodos de este dispositivo que tienen al menos una insignia, en el orden del historial (normalizados). */
+export function apodosConInsignias(almacen: AlmacenTexto | null = localSeguro()): string[] {
+  try {
+    return leerHistorial(almacen).filter((h) => h.insignias.length > 0).map((h) => h.jugador);
+  } catch {
+    return [];
+  }
+}
+
 /** Borra únicamente el historial local de insignias. */
 export function limpiarInsignias(almacen: AlmacenTexto | null = localSeguro()): void {
   try {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RotateCcw, Skull, Undo2 } from "lucide-react";
+import { Award, RotateCcw, Skull, Undo2 } from "lucide-react";
 import { GuardadoEstado } from "@/components/game/guardado-estado";
 import { Button } from "@/components/ui/button";
 import type { Modo } from "@/lib/ronda";
@@ -20,6 +20,11 @@ export function AccionesResultado({ modo, guardado, onJugarDeNuevo, onCambiarMod
       <Button size="lg" variant="outline" onClick={onCambiarModo}>
         {esExperto ? <Undo2 aria-hidden="true" /> : <Skull aria-hidden="true" />}
         {esExperto ? "Volver al modo normal" : "Modo experto"}
+      </Button>
+      <Button asChild variant="ghost">
+        <Link href="/mis-insignias">
+          <Award aria-hidden="true" /> Ver mis insignias
+        </Link>
       </Button>
       <Button asChild variant="ghost">
         <Link href="/">Ir al inicio</Link>

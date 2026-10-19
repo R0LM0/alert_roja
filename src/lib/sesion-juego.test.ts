@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlmacenTexto } from "./cola-offline";
 import { IDS_INSIGNIAS, resolverInsignias } from "./insignias";
 import { armarPartida, crearRonda } from "./ronda";
-import { guardarApodo, guardarInsignias, guardarResultado, leerApodo, leerInsignias, leerResultado, limpiar, limpiarInsignias, validarApodo } from "./sesion-juego";
+import { apodosConInsignias, guardarApodo, guardarInsignias, guardarResultado, leerApodo, leerInsignias, leerResultado, limpiar, limpiarInsignias, validarApodo } from "./sesion-juego";
 import type { InsigniaInfo } from "./resultado";
 
 function almacen(): AlmacenTexto {
@@ -142,6 +142,27 @@ describe("insignias locales", () => {
     expect(leerInsignias("Jugador 0", a)).toEqual([]);
     expect(leerInsignias("Jugador 1", a)).toHaveLength(1);
     expect(leerInsignias("Jugador 20", a)).toHaveLength(1);
+  });
+});
+
+describe("apodosConInsignias", () => {
+  it("lista solo los apodos con insignias, en orden de historial", () => {
+    const a = almacen();
+    expect(apodosConInsignias(a)).toEqual([]);
+    guardarInsignias("Ana", [PERFECTO], a);
+    guardarInsignias("Beto", [CAZADOR], a);
+    guardarInsignias("Cami", [], a);
+    expect(apodosConInsignias(a)).toEqual(["ana", "beto"]);
+  });
+
+  it("omite entradas sin insignias válidas y tolera almacenamiento bloqueado", () => {
+    const a = almacen();
+    a.setItem("alerta-roja:insignias", JSON.stringify([
+      { jugador: "ana", insignias: [{ id: "retirada", fecha: "2026-10-18T10:00:00.000Z" }] },
+      { jugador: "beto", insignias: [{ id: "cazador", fecha: "2026-10-18T10:00:00.000Z" }] },
+    ]));
+    expect(apodosConInsignias(a)).toEqual(["beto"]);
+    expect(apodosConInsignias(null)).toEqual([]);
   });
 });
 

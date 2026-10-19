@@ -74,13 +74,31 @@ export function resolverInsignias(ids: readonly string[]): InsigniaInfo[] {
   return ids.flatMap((id) => Object.hasOwn(CATALOGO_INSIGNIAS, id) ? [CATALOGO_INSIGNIAS[id as Insignia]] : []);
 }
 
-export type MedallaInsignia = { info: InsigniaInfo; requisito: string; ganada: boolean };
+export type MedallaInsignia = { info: InsigniaInfo; requisito: string; ganada: boolean; fecha?: string };
 
-/** Vista de medallas: todo el catálogo en su orden, con ganada o bloqueada y su requisito. */
-export function medallasInsignias(ganadas: readonly string[]): MedallaInsignia[] {
+/**
+ * Vista de medallas: todo el catálogo en su orden, con ganada o bloqueada y su requisito.
+ * `fechas` (id -> ISO) añade la primera vez que se ganó, cuando se conoce.
+ */
+export function medallasInsignias(ganadas: readonly string[], fechas: Readonly<Record<string, string>> = {}): MedallaInsignia[] {
   return IDS_INSIGNIAS.flatMap((id) => {
     const ganada = ganadas.includes(id);
     if (LEGADAS.has(id) && !ganada) return [];
-    return [{ info: CATALOGO_INSIGNIAS[id], requisito: REQUISITOS[id], ganada }];
+    const medalla: MedallaInsignia = { info: CATALOGO_INSIGNIAS[id], requisito: REQUISITOS[id], ganada };
+    if (ganada && fechas[id]) medalla.fecha = fechas[id];
+    return [medalla];
   });
+}
+
+const FORMATO_FECHA_INSIGNIA = new Intl.DateTimeFormat("es-NI", {
+  timeZone: "America/Managua",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** "18 de octubre de 2026" en hora de Managua; cadena vacía si la fecha no es válida. */
+export function formatearFechaInsignia(iso: string): string {
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? "" : FORMATO_FECHA_INSIGNIA.format(ms);
 }
