@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { localSeguro, type AlmacenTexto } from "./cola-offline";
+import { IDS_INSIGNIAS, type InsigniaInfo } from "./insignias";
 import { tieneGroseria } from "./profanity";
 import { normalizarApodo } from "./ranking";
-import type { InsigniaInfo } from "./resultado";
 import { respuestaSchema } from "./schema";
 
 // Traspaso de datos entre /jugar y /resultado (sessionStorage) y apodo recordado (localStorage).
@@ -15,16 +15,18 @@ const CLAVE_INSIGNIAS = "alerta-roja:insignias";
 const MAX_APODOS_INSIGNIAS = 20;
 const MAX_INSIGNIAS = 4;
 
-// Guardamos título e icono recibidos del catálogo de /resultado, no una segunda lista de etiquetas.
+// Persistimos solo el id y la primera fecha; los textos e iconos se resuelven al pintar.
 const insigniaGuardadaSchema = z.object({
-  id: z.enum(["perfecto", "ojo-clinico", "cazador", "bayesiano-nato"]),
-  titulo: z.string().min(1).max(80),
-  icono: z.enum(["brain", "shield-check", "smile"]),
+  id: z.enum(IDS_INSIGNIAS),
   fecha: z.string().datetime(),
 });
 const historialSchema = z.array(z.object({
   jugador: z.string().min(1).max(20),
-  insignias: z.array(insigniaGuardadaSchema).max(MAX_INSIGNIAS),
+  // Un id retirado no invalida las demás insignias del apodo.
+  insignias: z.array(z.unknown()).max(MAX_INSIGNIAS).transform((items) => items.flatMap((item) => {
+    const validada = insigniaGuardadaSchema.safeParse(item);
+    return validada.success ? [validada.data] : [];
+  })),
 })).max(MAX_APODOS_INSIGNIAS);
 
 export type InsigniaGuardada = z.infer<typeof insigniaGuardadaSchema>;
@@ -54,9 +56,7 @@ export function guardarInsignias(
     let cambiado = false;
     for (const insignia of insignias) {
       if (entrada?.insignias.some((i) => i.id === insignia.id)) continue;
-      const guardada = insigniaGuardadaSchema.safeParse({
-        id: insignia.id, titulo: insignia.titulo, icono: insignia.icono, fecha,
-      });
+      const guardada = insigniaGuardadaSchema.safeParse({ id: insignia.id, fecha });
       if (!guardada.success) continue; // ids desconocidos o datos inválidos no entran al historial
       if (!entrada) {
         entrada = { jugador: apodo, insignias: [] };

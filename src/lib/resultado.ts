@@ -1,5 +1,6 @@
 import { EVIDENCIAS, posteriorBayes, puntosPorDecision, type Evidencia } from "./caso-bayesiano";
 import { formatearPct } from "./formula-bayes";
+import { resolverInsignias, type InsigniaInfo } from "./insignias";
 import { prevalenciaDeModo, type Modo } from "./ronda";
 import {
   PACIENTES_POR_RONDA,
@@ -9,7 +10,6 @@ import {
   insignias,
   vppBayes,
   type Frecuencias,
-  type Insignia,
   type Respuesta,
 } from "./stats";
 
@@ -21,34 +21,7 @@ export function puntajeMaximo(): number {
   return PACIENTES_POR_RONDA;
 }
 
-export type InsigniaInfo = { id: Insignia; titulo: string; descripcion: string; icono: "brain" | "shield-check" | "smile" };
-
-const INSIGNIAS: Record<Insignia, InsigniaInfo> = {
-  perfecto: {
-    id: "perfecto",
-    titulo: "Ronda perfecta",
-    descripcion: "Tomaste las 10 decisiones de mayor valor esperado de la ronda.",
-    icono: "smile",
-  },
-  "ojo-clinico": {
-    id: "ojo-clinico",
-    titulo: "Ojo clínico",
-    descripcion: "Tomaste 8 o 9 decisiones de mayor valor esperado de la ronda.",
-    icono: "brain",
-  },
-  cazador: {
-    id: "cazador",
-    titulo: "Cazador de contagios",
-    descripcion: "Aislaste a todos los pacientes infectados de esta ronda.",
-    icono: "shield-check",
-  },
-  "bayesiano-nato": {
-    id: "bayesiano-nato",
-    titulo: "Bayesiano nato",
-    descripcion: "Tu estimación promedio quedó entre 25 % y 40 %, cerca de la realidad.",
-    icono: "brain",
-  },
-};
+export type { InsigniaInfo } from "./insignias";
 
 export type EntradaResultado = {
   modo: Modo;
@@ -124,7 +97,7 @@ export function calcularResultado({ modo, ronda, respuestas }: EntradaResultado)
     puntajeTotal,
     infectadosEnRonda: respuestas.filter((r) => r.estaba_infectado).length,
     frecuencias: frecuenciasNaturales(undefined, prevalencia),
-    insignias: insignias(respuestas, { modo, ronda }).map((id) => INSIGNIAS[id]),
+    insignias: resolverInsignias(insignias(respuestas, { modo, ronda })),
     esPuntajeAlto: puntajeTotal >= puntajeMaximo() * UMBRAL_PUNTAJE_ALTO,
     mensajeClave: `La prueba acierta ${formatearPct(SENSIBILIDAD * 100, 0)}, pero solo 1 de cada ${porCada} positivos está enfermo`,
   };

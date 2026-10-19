@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlmacenTexto } from "./cola-offline";
+import { resolverInsignias } from "./insignias";
 import { armarPartida, crearRonda } from "./ronda";
 import { guardarApodo, guardarInsignias, guardarResultado, leerApodo, leerInsignias, leerResultado, limpiar, limpiarInsignias, validarApodo } from "./sesion-juego";
 import type { InsigniaInfo } from "./resultado";
@@ -42,9 +43,13 @@ describe("insignias locales", () => {
     vi.setSystemTime(new Date("2026-10-20T10:00:00.000Z"));
     guardarInsignias("ana", [CAZADOR], a);
     expect(leerInsignias(" Ana ", a)).toEqual([
-      { id: "perfecto", titulo: PERFECTO.titulo, icono: PERFECTO.icono, fecha: "2026-10-19T10:00:00.000Z" },
-      { id: "cazador", titulo: CAZADOR.titulo, icono: CAZADOR.icono, fecha: "2026-10-20T10:00:00.000Z" },
+      { id: "perfecto", fecha: "2026-10-19T10:00:00.000Z" },
+      { id: "cazador", fecha: "2026-10-20T10:00:00.000Z" },
     ]);
+    expect(JSON.parse(a.getItem("alerta-roja:insignias")!)).toEqual([{ jugador: "ana", insignias: [
+      { id: "perfecto", fecha: "2026-10-19T10:00:00.000Z" },
+      { id: "cazador", fecha: "2026-10-20T10:00:00.000Z" },
+    ] }]);
     limpiarInsignias(a);
     expect(leerInsignias("Ana", a)).toEqual([]);
   });
@@ -57,7 +62,7 @@ describe("insignias locales", () => {
     vi.setSystemTime(new Date("2026-10-21T10:00:00.000Z"));
     guardarInsignias("Ana", [PERFECTO], a);
     expect(leerInsignias("Ana", a)).toEqual([
-      { id: "perfecto", titulo: PERFECTO.titulo, icono: PERFECTO.icono, fecha: "2026-10-19T10:00:00.000Z" },
+      { id: "perfecto", fecha: "2026-10-19T10:00:00.000Z" },
     ]);
   });
 
@@ -67,6 +72,19 @@ describe("insignias locales", () => {
     guardarInsignias("  ", [PERFECTO], a);
     expect(leerInsignias("Ana", a).map((i) => i.id)).toEqual(["perfecto"]);
     expect(leerInsignias("  ", a)).toEqual([]);
+  });
+
+  it("resuelve el historial con las etiquetas actuales y omite un id retirado", () => {
+    const a = almacen();
+    a.setItem("alerta-roja:insignias", JSON.stringify([{ jugador: "ana", insignias: [
+      { id: "retirada", fecha: "2026-10-18T10:00:00.000Z" },
+      { id: "perfecto", titulo: "Título antiguo", icono: "brain", fecha: "2026-10-19T10:00:00.000Z" },
+    ] }]));
+    const guardadas = leerInsignias("Ana", a);
+    expect(guardadas).toEqual([{ id: "perfecto", fecha: "2026-10-19T10:00:00.000Z" }]);
+    expect(resolverInsignias(["retirada", ...guardadas.map((i) => i.id)])).toEqual([
+      { id: "perfecto", titulo: "Ronda perfecta", descripcion: "Tomaste las 10 decisiones de mayor valor esperado de la ronda.", icono: "smile" },
+    ]);
   });
 
   it("contenido corrupto o estructura inválida se interpreta como historial vacío", () => {

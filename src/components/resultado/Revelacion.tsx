@@ -9,6 +9,7 @@ import type { FaseCiudad } from "@/lib/ciudad-layout";
 import { festejar } from "@/lib/confeti";
 import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
+import { resolverInsignias } from "@/lib/insignias";
 import { prevalenciaDeModo, type Modo } from "@/lib/ronda";
 import { calcularResultado } from "@/lib/resultado";
 import { guardarInsignias, leerInsignias, leerResultado, limpiar, type InsigniaGuardada, type ResultadoJuego } from "@/lib/sesion-juego";
@@ -58,6 +59,7 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
   );
   const pasos = useMemo(() => pasosBayes(prevalenciaDeModo(modo)), [modo]);
   const [historial, setHistorial] = useState<InsigniaGuardada[]>([]);
+  const insigniasHistorial = useMemo(() => resolverInsignias(historial.map((i) => i.id)), [historial]);
   useEffect(() => {
     // Solo un resultado completo (validado al leerlo de la sesión) puede otorgar insignias.
     if (resultado.ronda.length !== 10 || resultado.respuestas.length !== 10) return;
@@ -134,9 +136,9 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
       <Aparece orden={4}>
         <Insignias insignias={calculo.insignias} />
       </Aparece>
-      {historial.length > 0 ? (
+      {insigniasHistorial.length > 0 ? (
         <Aparece orden={4}>
-          <HistorialInsignias insignias={historial} />
+          <HistorialInsignias insignias={insigniasHistorial} />
         </Aparece>
       ) : null}
       <Aparece orden={5}>

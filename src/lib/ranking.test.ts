@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolverInsignias } from "./insignias";
 import {
   compararRanking,
   construirHistograma,
@@ -109,6 +110,10 @@ describe("informacionInsignias", () => {
     expect(informacionInsignias(["desconocido", "cazador"])).toEqual([
       { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
     ]);
+  });
+  it("usa los mismos títulos e iconos del catálogo y omite ids retirados", () => {
+    const ids = ["ojo-clinico", "retirada", "perfecto"];
+    expect(informacionInsignias(ids)).toEqual(resolverInsignias(ids).map(({ id, titulo, icono }) => ({ id, titulo, icono })));
   });
   it("devuelve una lista vacía si no hay insignias", () => {
     expect(informacionInsignias([])).toEqual([]);

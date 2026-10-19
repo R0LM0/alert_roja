@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolverInsignias } from "./insignias";
 import { PREVALENCIA_EXPERTO, puntajePartida, vppBayes } from "./stats";
 import { UMBRAL_PUNTAJE_ALTO, calcularResultado, distribuirPuntos, puntajeMaximo, type EntradaResultado } from "./resultado";
 
@@ -78,6 +79,7 @@ describe("calcularResultado", () => {
     const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
     const r = calcularResultado(nueva);
     expect(r.insignias.map((i) => i.id)).toEqual(["perfecto", "cazador"]);
+    expect(r.insignias).toEqual(resolverInsignias(["perfecto", "cazador"]));
     expect(r.insignias[0].titulo).toBe("Ronda perfecta");
     expect(r.insignias.some((i) => i.id === "bayesiano-nato")).toBe(false);
   });

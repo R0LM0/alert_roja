@@ -1,7 +1,6 @@
 import { Brain, ShieldCheck, Smile, type LucideIcon } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
-import type { InsigniaInfo } from "@/lib/resultado";
-import type { InsigniaGuardada } from "@/lib/sesion-juego";
+import type { InsigniaInfo } from "@/lib/insignias";
 
 const ICONOS: Record<InsigniaInfo["icono"], LucideIcon> = { brain: Brain, "shield-check": ShieldCheck, smile: Smile };
 
@@ -18,7 +17,7 @@ function IconoInsignia({ icono, compacto = false }: { icono: InsigniaInfo["icono
 }
 
 /** Historial de insignias de este apodo en este dispositivo (sin tarjeta si está vacío). */
-export function HistorialInsignias({ insignias }: { insignias: InsigniaGuardada[] }) {
+export function HistorialInsignias({ insignias }: { insignias: InsigniaInfo[] }) {
   if (!insignias.length) return null;
   return (
     <Card className="flex flex-col gap-3">
