@@ -11,14 +11,14 @@ import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
 import { prevalenciaDeModo, type Modo } from "@/lib/ronda";
 import { calcularResultado } from "@/lib/resultado";
-import { leerResultado, limpiar, type ResultadoJuego } from "@/lib/sesion-juego";
+import { guardarInsignias, leerInsignias, leerResultado, limpiar, type InsigniaGuardada, type ResultadoJuego } from "@/lib/sesion-juego";
 import { useSonido } from "@/lib/sound";
 import { AccionesResultado } from "./AccionesResultado";
 import { Aparece } from "./Aparece";
 import { CiudadSlot } from "./CiudadSlot";
 import { ComparacionIntuicion } from "./ComparacionIntuicion";
 import { FormulaBayes } from "./FormulaBayes";
-import { Insignias } from "./Insignias";
+import { HistorialInsignias, Insignias } from "./Insignias";
 import { MensajeClave } from "./MensajeClave";
 import { PuntajeResumen } from "./PuntajeResumen";
 import { VeredictoCiudad } from "./VeredictoCiudad";
@@ -57,6 +57,13 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
     [modo, resultado],
   );
   const pasos = useMemo(() => pasosBayes(prevalenciaDeModo(modo)), [modo]);
+  const [historial, setHistorial] = useState<InsigniaGuardada[]>([]);
+  useEffect(() => {
+    // Solo un resultado completo (validado al leerlo de la sesión) puede otorgar insignias.
+    if (resultado.ronda.length !== 10 || resultado.respuestas.length !== 10) return;
+    guardarInsignias(resultado.jugador, calculo.insignias);
+    setHistorial(leerInsignias(resultado.jugador));
+  }, [resultado, calculo.insignias]);
 
   const esPuntajeAlto = calculo.esPuntajeAlto;
   const decisionesAcertadas = calculo.filas.filter((f) => f.decisionAcertada).length;
@@ -127,6 +134,11 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
       <Aparece orden={4}>
         <Insignias insignias={calculo.insignias} />
       </Aparece>
+      {historial.length > 0 ? (
+        <Aparece orden={4}>
+          <HistorialInsignias insignias={historial} />
+        </Aparece>
+      ) : null}
       <Aparece orden={5}>
         <MensajeClave mensaje={calculo.mensajeClave} />
       </Aparece>
