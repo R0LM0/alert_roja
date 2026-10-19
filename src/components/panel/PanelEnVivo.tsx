@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { urlPodio } from "@/lib/panel";
 import { cn } from "@/lib/utils";
 import { ActividadReciente } from "./ActividadReciente";
 import { BotonExportar } from "./BotonExportar";
@@ -31,6 +33,12 @@ export function PanelEnVivo({ clave }: Props) {
           <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4">
             <IndicadorEnVivo ultimaActualizacion={ultimaActualizacion} error={error} />
             <FiltroPrevalencia modo={modo} onCambiar={setModo} />
+            <a
+              href={urlPodio(clave)}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "min-h-11 flex-1 text-base sm:min-h-14 sm:flex-none sm:text-xl 2xl:text-2xl")}
+            >
+              Podio
+            </a>
             <BotonExportar clave={clave} />
           </div>
         </header>

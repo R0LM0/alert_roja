@@ -145,3 +145,8 @@ export function urlExport(key?: string, formato: "xlsx" | "csv" = "xlsx"): strin
   const params = [formato === "csv" ? "formato=csv" : "", key ? `key=${encodeURIComponent(key)}` : ""].filter(Boolean);
   return params.length ? `/api/export?${params.join("&")}` : "/api/export";
 }
+
+/** Enlace al podio de la feria (protegido por la misma clave del panel). */
+export function urlPodio(key?: string): string {
+  return key ? `/podio?key=${encodeURIComponent(key)}` : "/podio";
+}
