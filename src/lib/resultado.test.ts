@@ -31,17 +31,28 @@ describe("calcularResultado", () => {
 
   it("filas con desglose", () => {
     const f = calcularResultado(entrada()).filas[0];
-    expect(f).toMatchObject({ orden: 1, nombre: "P1", estimacionPct: 33, decisionAcertada: true, bonoDecision: 20 });
-    expect(f.puntajeEstimacion + f.bonoDecision).toBe(f.puntaje);
+    expect(f).toMatchObject({ orden: 1, nombre: "P1", estimacionPct: 33, decisionAcertada: true, puntaje: 1 });
     const mal = calcularResultado(
       entrada({ respuestas: entrada().respuestas.map((x) => ({ ...x, decision: "aislar" as const })) }),
     ).filas[5];
     expect(mal.decisionAcertada).toBe(false);
-    expect(mal.bonoDecision).toBe(0);
+    expect(mal.puntaje).toBe(0);
   });
 
-  it("usa el puntaje del servidor si viene", () => {
-    expect(calcularResultado(entrada({ puntajeServidor: 777 })).puntajeTotal).toBe(777);
+  it("muestra aciertos sin intuición cuando toda la ronda carece de estimación", () => {
+    const e = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    const r = calcularResultado(e);
+    expect(r.puntajeTotal).toBe(10);
+    expect(r.estimacionPromedioPct).toBeNull();
+    expect(r.filas[0]).toMatchObject({ estimacionPct: null, puntaje: 1 });
+    expect(r.filas.every((f) => f.puntaje === 1)).toBe(true);
+  });
+
+  it("usa el puntaje del servidor actual y no presenta el puntaje histórico como aciertos", () => {
+    const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    expect(calcularResultado({ ...nueva, puntajeServidor: 8 }).puntajeTotal).toBe(8);
+    expect(calcularResultado(entrada({ puntajeServidor: 777 })).puntajeTotal).toBe(10);
+    expect(calcularResultado(entrada({ puntajeServidor: 5 })).puntajeTotal).toBe(10);
   });
 
   it("insignias con metadatos", () => {
@@ -59,10 +70,11 @@ describe("calcularResultado", () => {
   });
 
   it("puntaje alto desde el umbral", () => {
-    expect(puntajeMaximo()).toBe(1200);
+    expect(puntajeMaximo()).toBe(10);
     expect(UMBRAL_PUNTAJE_ALTO).toBe(0.75);
-    expect(calcularResultado(entrada({ puntajeServidor: 900 })).esPuntajeAlto).toBe(true);
-    expect(calcularResultado(entrada({ puntajeServidor: 899 })).esPuntajeAlto).toBe(false);
+    const nueva = entrada({ respuestas: entrada().respuestas.map((r) => ({ ...r, estimacion_pct: null })) });
+    expect(calcularResultado({ ...nueva, puntajeServidor: 8 }).esPuntajeAlto).toBe(true);
+    expect(calcularResultado({ ...nueva, puntajeServidor: 7 }).esPuntajeAlto).toBe(false);
   });
 
   it("mensaje clave normal y experto calculados", () => {

@@ -31,7 +31,6 @@ import {
 import { guardarResultado, leerApodo } from "@/lib/sesion-juego";
 
 const SEGUNDOS_POR_PACIENTE = 15;
-const ESTIMACION_INICIAL = 50;
 
 type Fase = "cargando" | "jugando" | "enviando" | "error";
 
@@ -48,7 +47,6 @@ export function Turno({ modo }: { modo: Modo }) {
   const [apodo, setApodo] = useState("");
   const [ronda, setRonda] = useState<PacienteRonda[]>([]);
   const [indice, setIndice] = useState(0);
-  const [estimacion, setEstimacion] = useState(ESTIMACION_INICIAL);
   const [conTiempo, setConTiempo] = useState(true);
   const [restantes, setRestantes] = useState(SEGUNDOS_POR_PACIENTE);
   const [tiempoAgotado, setTiempoAgotado] = useState(false);
@@ -61,7 +59,6 @@ export function Turno({ modo }: { modo: Modo }) {
   const movimientoReducido = useReducedMotion() ?? false;
 
   const respuestas = useRef<RespuestaUI[]>([]);
-  const estimacionRef = useRef(ESTIMACION_INICIAL);
   const inicioPaciente = useRef(0);
   const ocupado = useRef(false); // evita doble decisión (botón + timeout + swipe)
   const idPartida = useRef("");
@@ -118,11 +115,6 @@ export function Turno({ modo }: { modo: Modo }) {
     if (fase === "jugando" && escenaLista && llegoPaciente) inicioPaciente.current = performance.now();
   }, [fase, escenaLista, llegoPaciente, indice]);
 
-  function cambiarEstimacion(pct: number) {
-    estimacionRef.current = pct;
-    setEstimacion(pct);
-  }
-
   function avanzar() {
     if (indice + 1 >= ronda.length) {
       void finalizar();
@@ -130,15 +122,13 @@ export function Turno({ modo }: { modo: Modo }) {
     }
     ocupado.current = false;
     setTiempoAgotado(false);
-    cambiarEstimacion(ESTIMACION_INICIAL);
     setLlegoPaciente(false);
     setSaliendoPaciente(false);
     setIndice(indice + 1);
   }
 
   /**
-   * Si se agota el tiempo NO se decide por el jugador a ciegas: se envía la estimación actual
-   * del termómetro y el paciente queda LIBERADO (no actuar = no aislar). Se muestra un aviso
+   * Si se agota el tiempo el paciente queda LIBERADO (no actuar = no aislar). Se muestra un aviso
    * ámbar mientras el paciente sale caminando y se pasa al siguiente. El tiempo registrado
    * es el real (~15 s).
    */
@@ -149,7 +139,7 @@ export function Turno({ modo }: { modo: Modo }) {
       ...respuestas.current,
       {
         paciente: ronda[indice],
-        estimacion_pct: estimacionRef.current,
+        estimacion_pct: null,
         decision,
         tiempo_ms: performance.now() - inicioPaciente.current,
       },
@@ -308,15 +298,13 @@ export function Turno({ modo }: { modo: Modo }) {
           className="flex items-center gap-2 rounded-lg bg-warning px-4 py-3 font-semibold text-warning-foreground"
         >
           <TimerOff aria-hidden="true" className="size-5" />
-          ¡Se acabó el tiempo! Se envió tu estimación y el paciente quedó liberado.
+          ¡Se acabó el tiempo! El paciente quedó liberado.
         </p>
       ) : null}
 
       <TarjetaPaciente
         key={paciente.orden}
         paciente={paciente}
-        estimacion={estimacion}
-        onEstimacion={cambiarEstimacion}
         onDecidir={decidir}
         disabled={tiempoAgotado}
       />

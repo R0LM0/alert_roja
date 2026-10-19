@@ -1,14 +1,12 @@
 import { formatearPct } from "./formula-bayes";
 import { prevalenciaDeModo, type Modo } from "./ronda";
 import {
-  BONO_DECISION,
   PACIENTES_POR_RONDA,
   SENSIBILIDAD,
   decisionAcertada,
   frecuenciasNaturales,
   insignias,
   puntajePartida,
-  puntajeRespuesta,
   vppBayes,
   type Frecuencias,
   type Insignia,
@@ -18,9 +16,9 @@ import {
 /** Fracción del puntaje máximo posible desde la que se festeja. */
 export const UMBRAL_PUNTAJE_ALTO = 0.75;
 
-/** Máximo posible: estimación perfecta (100) + bono de decisión en cada paciente. */
+/** Máximo posible: una decisión acertada por paciente. */
 export function puntajeMaximo(): number {
-  return PACIENTES_POR_RONDA * (100 + BONO_DECISION);
+  return PACIENTES_POR_RONDA;
 }
 
 export type InsigniaInfo = { id: Insignia; titulo: string; descripcion: string; icono: "brain" | "shield-alert" | "smile" };
@@ -57,11 +55,9 @@ export type EntradaResultado = {
 export type FilaPaciente = {
   orden: number;
   nombre: string;
-  estimacionPct: number;
+  estimacionPct: number | null;
   decision: Respuesta["decision"];
   estaba_infectado: boolean;
-  puntajeEstimacion: number;
-  bonoDecision: number;
   puntaje: number;
   decisionAcertada: boolean;
 };
@@ -69,7 +65,7 @@ export type FilaPaciente = {
 export type ResultadoCalculado = {
   prevalencia: number;
   vppTeoricoPct: number;
-  estimacionPromedioPct: number;
+  estimacionPromedioPct: number | null;
   filas: FilaPaciente[];
   puntajeTotal: number;
   infectadosEnRonda: number;
@@ -88,30 +84,28 @@ export function calcularResultado({ modo, ronda, respuestas, puntajeServidor }: 
 
   const filas = respuestas.map<FilaPaciente>((r) => {
     const acierto = decisionAcertada(r);
-    const puntajeEstimacion = puntajeRespuesta(r.estimacion_pct, vppPct);
-    const bonoDecision = acierto ? BONO_DECISION : 0;
     return {
       orden: r.orden,
       nombre: nombres.get(r.orden) ?? `Paciente ${r.orden}`,
       estimacionPct: r.estimacion_pct,
       decision: r.decision,
       estaba_infectado: r.estaba_infectado,
-      puntajeEstimacion,
-      bonoDecision,
-      puntaje: puntajeEstimacion + bonoDecision,
+      puntaje: acierto ? 1 : 0,
       decisionAcertada: acierto,
     };
   });
 
-  // Si el servidor ya calculó el puntaje, se muestra ese (fuente de verdad); debe coincidir con puntajePartida.
-  const puntajeTotal = puntajeServidor ?? puntajePartida(respuestas, prevalencia);
-  const n = respuestas.length;
+  const estimaciones = respuestas.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
+  // Las partidas antiguas conservan su puntaje de estimaciones en la base, pero
+  // aquí se presentan como aciertos. Las partidas nuevas usan el valor del servidor.
+  const puntajeTotal = estimaciones.length === 0 && puntajeServidor !== undefined
+    ? puntajeServidor : puntajePartida(respuestas, prevalencia);
   const porCada = Math.round(1 / vpp);
 
   return {
     prevalencia,
     vppTeoricoPct: vppPct,
-    estimacionPromedioPct: n === 0 ? 0 : respuestas.reduce((a, r) => a + r.estimacion_pct, 0) / n,
+    estimacionPromedioPct: estimaciones.length ? estimaciones.reduce((a, pct) => a + pct, 0) / estimaciones.length : null,
     filas,
     puntajeTotal,
     infectadosEnRonda: respuestas.filter((r) => r.estaba_infectado).length,

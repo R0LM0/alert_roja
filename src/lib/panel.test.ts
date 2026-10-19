@@ -136,6 +136,16 @@ describe("esquemas de respuesta", () => {
     expect(esquemaStats.safeParse({ ...base, totalJugadores: 0 }).success).toBe(true);
     expect(esquemaStats.safeParse({ ...base, n: "x" }).success).toBe(false);
   });
+  it("valida respuestas de partidas con decisiones pero sin estimaciones", () => {
+    const sinEstimaciones = {
+      prevalencia: 0.1, totalPartidas: 1, totalJugadores: 1, n: 10,
+      estimacionPromedioPct: null, vppObservadoPct: 30, vppTeoricoPct: 33.3,
+      pctSobreestiman: null, pctAislados: 50, aisladosSanos: 2, liberadosInfectados: 1,
+      histograma: cubetas,
+    };
+    expect(esquemaStats.safeParse(sinEstimaciones).success).toBe(true);
+    expect(datosHistograma(sinEstimaciones.histograma).every((f) => f.cantidad === 0)).toBe(true);
+  });
   it("valida /api/ranking", () => {
     const ok = { ranking: [{ jugador: "Ana", puntaje: 300, prevalencia: 0.1, creada_en: "2026-01-01T00:00:00.000Z" }] };
     expect(esquemaRanking.safeParse(ok).success).toBe(true);

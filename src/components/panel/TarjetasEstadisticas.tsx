@@ -7,17 +7,20 @@ type Props = { stats: StatsPanel | undefined };
 /** Cuatro cifras clave del público; "—" cuando aún no hay respuestas. */
 export function TarjetasEstadisticas({ stats }: Props) {
   const hayDatos = stats !== undefined && stats.n > 0;
+  const hayEstimaciones = stats?.estimacionPromedioPct !== null && stats?.estimacionPromedioPct !== undefined;
   const dato = (v: number | null | undefined) => (hayDatos ? formatoPct(v) : "—");
 
   return (
     <section aria-label="Cifras clave" className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-      <StatCard
-        Icono={Target}
-        retardo={0}
-        titulo="Estimación promedio"
-        valor={dato(stats?.estimacionPromedioPct)}
-        nota={hayDatos ? `${formatoEntero(stats.n)} respuestas` : "Sin respuestas aún"}
-      />
+      {hayEstimaciones ? (
+        <StatCard
+          Icono={Target}
+          retardo={0}
+          titulo="Estimación promedio"
+          valor={dato(stats?.estimacionPromedioPct)}
+          nota={hayDatos ? `${formatoEntero(stats.n)} respuestas` : "Sin respuestas aún"}
+        />
+      ) : null}
       <StatCard
         Icono={Activity}
         retardo={1.2}
@@ -32,13 +35,15 @@ export function TarjetasEstadisticas({ stats }: Props) {
         valor={stats ? formatoPct(stats.vppTeoricoPct) : "—"}
         nota="Según el teorema de Bayes"
       />
-      <StatCard
-        Icono={TrendingUp}
-        retardo={3.6}
-        titulo="Sobreestimaron"
-        valor={dato(stats?.pctSobreestiman)}
-        nota="Estimaron por encima del VPP"
-      />
+      {hayEstimaciones ? (
+        <StatCard
+          Icono={TrendingUp}
+          retardo={3.6}
+          titulo="Sobreestimaron"
+          valor={dato(stats?.pctSobreestiman)}
+          nota="Estimaron por encima del VPP"
+        />
+      ) : null}
     </section>
   );
 }

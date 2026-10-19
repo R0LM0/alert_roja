@@ -88,6 +88,12 @@ describe("armarPartida", () => {
     });
   });
 
+  it("conserva estimación nula en el payload de decisión pura", () => {
+    const payload = armarPartida("Ana", 0.1, respuestas.map((r) => ({ ...r, estimacion_pct: null })));
+    expect(payload.respuestas.every((r) => r.estimacion_pct === null)).toBe(true);
+    expect(partidaSchema.safeParse(payload).success).toBe(true);
+  });
+
   it("incluye el id de idempotencia cuando se entrega y lo omite si no", () => {
     const id = "3f2b8c1e-9d4a-4b7e-8a61-0c5d2e7f9a10";
     const con = armarPartida("Ana", 0.1, respuestas, id);

@@ -172,6 +172,14 @@ describe("libro Excel", () => {
     expect(JSON.stringify(ws.autoFilter)).toMatch(/A1:M4|"row":1/);
   });
 
+  it("deja vacía la estimación nula y conserva las columnas y decisiones", async () => {
+    const wb = await recargar({ ...datos, respuestas: [respuesta({ estimacionPct: null })] });
+    const ws = wb.getWorksheet("Respuestas")!;
+    expect(ws.getCell("I2").value).toBeNull();
+    expect(ws.getCell("K2").value).toBe("Aislar");
+    expect(ws.getCell("L2").value).toBe("Sí");
+  });
+
   it("un apodo que parece fórmula queda como texto", async () => {
     const ws = (await recargar()).getWorksheet("Respuestas")!;
     const c = ws.getCell("C4");

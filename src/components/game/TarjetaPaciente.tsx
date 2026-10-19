@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { AccionesDecision } from "@/components/game/AccionesDecision";
 import { PatientAvatar } from "@/components/game/patient-avatar";
 import { PositivoStamp } from "@/components/game/positivo-stamp";
-import { Termometro } from "@/components/game/termometro";
 import type { Decision, PacienteRonda } from "@/lib/ronda";
 
 /** Distancia (px) y velocidad (px/s) mínimas para que un deslizamiento cuente como decisión. */
@@ -16,18 +15,16 @@ const UMBRAL_VELOCIDAD = 600;
 
 type TarjetaPacienteProps = {
   paciente: PacienteRonda;
-  estimacion: number;
-  onEstimacion: (pct: number) => void;
   onDecidir: (decision: Decision) => void;
   disabled?: boolean;
 };
 
 /**
  * Tarjeta del paciente. Deslizar la parte superior (avatar y nombre): derecha = aislar,
- * izquierda = liberar. El arrastre solo arranca desde ahí para no chocar con el slider.
+ * izquierda = liberar. El arrastre solo arranca desde el avatar y el nombre.
  * No muestra si el paciente está infectado: la verdad se revela al final.
  */
-export function TarjetaPaciente({ paciente, estimacion, onEstimacion, onDecidir, disabled }: TarjetaPacienteProps) {
+export function TarjetaPaciente({ paciente, onDecidir, disabled }: TarjetaPacienteProps) {
   const reducido = useReducedMotion();
   const controles = useDragControls();
   const x = useMotionValue(0);
@@ -91,7 +88,6 @@ export function TarjetaPaciente({ paciente, estimacion, onEstimacion, onDecidir,
           <DoorOpen className="size-4" /> Liberar
         </motion.span>
 
-        <Termometro value={estimacion} onChange={onEstimacion} disabled={disabled} />
         <AccionesDecision onDecidir={onDecidir} disabled={disabled} />
         <p className="hidden text-center text-sm text-muted pointer-coarse:block">
           También puedes deslizar la tarjeta: a la derecha aísla, a la izquierda libera.

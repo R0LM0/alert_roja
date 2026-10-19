@@ -32,7 +32,8 @@ async function capturarFlujo(page: Page, nombre: string) {
 
   // Primera tarjeta con la escena completa detrás: se deja asentar la
   // entrada de la tarjeta para no atraparla a medio fundido.
-  await expect(page.getByRole("slider")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Aislar", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Liberar", exact: true })).toBeVisible();
   await expect(page.getByText("Entrando al consultorio…")).toBeHidden();
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${SALIDAS}/${nombre}-primer-paciente.png` });

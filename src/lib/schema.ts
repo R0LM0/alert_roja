@@ -6,7 +6,7 @@ export const prevalenciaSchema = z.union([z.literal(0.1), z.literal(0.01)]);
 
 export const respuestaSchema = z.object({
   orden: z.number().int().min(1).max(PACIENTES_POR_RONDA),
-  estimacion_pct: z.number().int().min(0).max(100),
+  estimacion_pct: z.number().int().min(0).max(100).nullish().transform((pct) => pct ?? null),
   decision: z.enum(["aislar", "liberar"]),
   estaba_infectado: z.boolean(),
   tiempo_ms: z.number().int().min(0).max(600_000),

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useReducedMotion } from "motion/react";
-import { BarChart3 } from "lucide-react";
 import { Bar, BarChart, LabelList, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Card } from "@/components/ui/card";
 import { anclajeEtiquetaVpp, datosHistograma, formatoPct, posicionLineaVpp, type CubetaApi } from "@/lib/panel";
@@ -33,22 +32,13 @@ export function HistogramaEstimaciones({ histograma, vppTeoricoPct, totalRespues
   const filas = useMemo(() => (histograma ? datosHistograma(histograma) : []), [histograma]);
   const linea = vppTeoricoPct === undefined ? undefined : posicionLineaVpp(vppTeoricoPct).posicion;
   const etiquetaLinea = vppTeoricoPct === undefined ? "" : `VPP teórico ${formatoPct(vppTeoricoPct)}`;
-  const vacio = filas.length === 0 || totalRespuestas === 0;
+  // Las rondas sin estimaciones no tienen distribución que mostrar.
+  if (filas.length === 0 || totalRespuestas === 0 || filas.every((f) => f.cantidad === 0)) return null;
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col gap-2 p-4 sm:p-6">
       <h2 className="font-display text-xl font-bold sm:text-3xl">¿Qué estimó el público?</h2>
-      {vacio ? (
-        <div
-          data-testid="histograma-vacio"
-          role="status"
-          className="flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border px-4 py-8 text-center sm:min-h-64"
-        >
-          <BarChart3 aria-hidden="true" className="size-10 text-muted" />
-          <p className="text-lg font-semibold text-muted 2xl:text-2xl">Aún no hay respuestas. ¡Escanea el QR y juega!</p>
-        </div>
-      ) : (
-        <div
+      <div
           data-testid="histograma-grafico"
           role="img"
           aria-label={`Histograma de estimaciones. ${etiquetaLinea}.`}
@@ -107,8 +97,7 @@ export function HistogramaEstimaciones({ histograma, vppTeoricoPct, totalRespues
             </BarChart>
           </ResponsiveContainer>
         </div>
-      )}
-      {compacto && !vacio ? <p className="text-center text-sm font-medium text-muted">Estimación (%), en rangos de 10</p> : null}
+      {compacto ? <p className="text-center text-sm font-medium text-muted">Estimación (%), en rangos de 10</p> : null}
 
       {/* El contenedor sr-only recorta la tabla; sola, su contenido ensanchaba la página en móvil. */}
       <div className="sr-only">

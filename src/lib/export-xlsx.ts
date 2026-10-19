@@ -35,7 +35,7 @@ export type FilaRespuestaExport = {
   tiempoTotalMs: number | null;
   primerIntento: boolean;
   orden: number;
-  estimacionPct: number;
+  estimacionPct: number | null;
   decision: "aislar" | "liberar";
   estabaInfectado: boolean;
   tiempoMs: number;
@@ -94,11 +94,11 @@ export function bloquesExplicativos(): BloqueTexto[] {
     {
       titulo: "¿Qué es Alerta Roja?",
       texto:
-        "Un juego sobre probabilidad. Cada jugador ve 10 pacientes que dieron positivo en una prueba (acierta con el 90 % de los infectados y con el 80 % de los sanos), estima qué probabilidad hay de que de verdad estén infectados y decide si los aísla o los libera. Hay dos dificultades: Normal (10 % de la población infectada) y Experto (1 %).",
+        "Un juego sobre probabilidad. Cada jugador ve 10 pacientes que dieron positivo en una prueba (acierta con el 90 % de los infectados y con el 80 % de los sanos) y decide si los aísla o los libera. Cada decisión acertada suma un punto. Hay dos dificultades: Normal (10 % de la población infectada) y Experto (1 %). Las estimaciones históricas se conservan cuando existen.",
     },
     {
       titulo: "Estimación promedio",
-      texto: "Promedio de lo que el público creyó: la probabilidad de estar infectado, dado que la prueba salió positiva.",
+      texto: "Promedio de estimaciones históricas, cuando existen: la probabilidad que se creyó de estar infectado tras dar positivo. Las partidas nuevas no piden estimación.",
     },
     {
       titulo: "VPP observado y VPP teórico",
@@ -108,7 +108,7 @@ export function bloquesExplicativos(): BloqueTexto[] {
     {
       titulo: "% que sobreestimó",
       texto:
-        "Porcentaje de estimaciones por encima del VPP teórico. Un valor alto indica que el público tiende a asustarse de más ante un positivo.",
+        "Porcentaje de estimaciones históricas por encima del VPP teórico. Si no hubo estimaciones, esta celda queda vacía.",
     },
     {
       titulo: "¿Por qué solo cuenta el primer intento?",

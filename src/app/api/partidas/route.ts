@@ -51,7 +51,7 @@ function guardar(
       from p,
         unnest(
           ${ordenadas.map((r) => r.orden)}::smallint[],
-          ${ordenadas.map((r) => r.estimacion_pct)}::smallint[],
+          ${ordenadas.map((r) => r.estimacion_pct ?? null)}::smallint[],
           ${ordenadas.map((r) => r.decision)}::text[],
           ${ordenadas.map((r) => r.estaba_infectado)}::boolean[],
           ${ordenadas.map((r) => r.tiempo_ms)}::int[]

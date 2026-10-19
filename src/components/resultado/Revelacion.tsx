@@ -100,14 +100,16 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
       <Aparece orden={0}>
         <CiudadSlot frecuencias={calculo.frecuencias} mensajeFrecuencias={pasos.texto.frecuencias} fase={fase} />
       </Aparece>
-      <Aparece orden={1}>
-        <ComparacionIntuicion
-          intuicionPct={calculo.estimacionPromedioPct}
-          realidadPct={calculo.vppTeoricoPct}
-          intuicionTexto={pctLegible(calculo.estimacionPromedioPct)}
-          realidadTexto={pctLegible(calculo.vppTeoricoPct)}
-        />
-      </Aparece>
+      {calculo.estimacionPromedioPct !== null ? (
+        <Aparece orden={1}>
+          <ComparacionIntuicion
+            intuicionPct={calculo.estimacionPromedioPct}
+            realidadPct={calculo.vppTeoricoPct}
+            intuicionTexto={pctLegible(calculo.estimacionPromedioPct)}
+            realidadTexto={pctLegible(calculo.vppTeoricoPct)}
+          />
+        </Aparece>
+      ) : null}
       <Aparece orden={2}>
         <PuntajeResumen
           total={calculo.puntajeTotal}

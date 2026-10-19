@@ -43,7 +43,7 @@ export function nuevoIdPartida(): string {
 /** Lo que registra la interfaz por paciente. */
 export type RespuestaUI = {
   paciente: PacienteRonda;
-  estimacion_pct: number;
+  estimacion_pct: number | null;
   decision: Decision;
   tiempo_ms: number;
 };
@@ -68,7 +68,7 @@ export function armarPartida(
     prevalencia,
     respuestas: respuestas.map((r) => ({
       orden: r.paciente.orden,
-      estimacion_pct: acotar(r.estimacion_pct, 0, 100),
+      estimacion_pct: r.estimacion_pct === null ? null : acotar(r.estimacion_pct, 0, 100),
       decision: r.decision,
       estaba_infectado: r.paciente.estaba_infectado,
       tiempo_ms: acotar(r.tiempo_ms, 0, TIEMPO_MAX_MS),

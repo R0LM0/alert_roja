@@ -23,7 +23,11 @@ const FONDOS = ["ffd6cc", "ffe8b3", "d4f1d9", "d3e4ff", "e9d8ff", "ffd9ec"];
 const CARAS = ["calm", "blank", "serious"] as const;
 const ACCESORIOS = ["glasses", "glasses2", "glasses3", "glasses4", "glasses5", "sunglasses"] as const;
 
-/** El mismo avatar neutro del HUD, utilizable también como textura 3D. */
+/**
+ * El mismo avatar neutro del HUD, utilizable también como textura 3D.
+ * `size` fija width/height en el SVG: sin dimensiones intrínsecas, el decode
+ * para WebGL sube una textura vacía (el <img> del HUD sí la infería del viewBox).
+ */
 export function getPatientAvatarUri(seed: string): string {
   return createAvatar(openPeeps, {
     seed,
@@ -33,6 +37,7 @@ export function getPatientAvatarUri(seed: string): string {
     maskProbability: 0,
     accessoriesProbability: 25,
     radius: 50,
+    size: 128,
   }).toDataUri();
 }
 

@@ -4,6 +4,9 @@ import {
   DURACION_ENTRADA_MS,
   DURACION_SALIDA_MS,
   fasePaciente,
+  anguloSalida,
+  alphaEntrada,
+  coloresPaciente,
   pasoWalk,
   posPaciente,
 } from "./paciente3d";
@@ -63,5 +66,31 @@ describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => 
     expect(entrada[1] - entrada[0]).toBeLessThan(entrada[4] - entrada[3]);
     expect(Number.isFinite(pasoWalk(0))).toBe(true);
     expect(pasoWalk(250)).toBeGreaterThan(pasoWalk(0));
+  });
+
+  it("gira hacia la puerta durante 350 ms sin cambiar los dos segundos de salida", () => {
+    expect(anguloSalida(0)).toBe(0);
+    expect(anguloSalida(175)).toBeGreaterThan(0);
+    expect(anguloSalida(175)).toBeLessThan(Math.PI);
+    expect(anguloSalida(350)).toBeCloseTo(Math.PI);
+    expect(anguloSalida(DURACION_SALIDA_MS)).toBeCloseTo(Math.PI);
+    expect(fasePaciente(350, true)).toBe("saliendo");
+  });
+
+  it("aparece en la puerta durante 400 ms y sin movimiento aparece completo", () => {
+    expect(alphaEntrada(0)).toBe(0);
+    expect(alphaEntrada(200)).toBeCloseTo(0.5);
+    expect(alphaEntrada(400)).toBe(1);
+    expect(alphaEntrada(DURACION_ENTRADA_MS)).toBe(1);
+    expect(alphaEntrada(0, true)).toBe(1);
+  });
+
+  it("elige atuendo y piel deterministas por seed con variantes visibles", () => {
+    const primero = coloresPaciente("paciente-1");
+    expect(coloresPaciente("paciente-1")).toEqual(primero);
+    const variantes = Array.from({ length: 80 }, (_, i) => coloresPaciente(`paciente-${i}`));
+    expect(new Set(variantes.map(({ camisa }) => camisa)).size).toBe(5);
+    expect(new Set(variantes.map(({ pantalon }) => pantalon)).size).toBe(4);
+    expect(new Set(variantes.map(({ piel }) => piel)).size).toBe(4);
   });
 });

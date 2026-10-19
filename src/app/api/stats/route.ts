@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const rs = filas as unknown as Respuesta[];
     // Sin filtro, el VPP teórico es el del escenario normal (10 %).
     const resumen = resumir(rs, prev ?? 0.1);
-    const histograma = construirHistograma(rs.map((r) => Number(r.estimacion_pct)));
+    const histograma = construirHistograma(rs.flatMap((r) => r.estimacion_pct === null ? [] : [Number(r.estimacion_pct)]));
 
     return NextResponse.json({
       prevalencia: prev,

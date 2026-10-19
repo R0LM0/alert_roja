@@ -29,7 +29,7 @@ export async function leerRespuestas(): Promise<FilaRespuestaExport[]> {
     tiempoTotalMs: f.tiempo_total_ms === null ? null : Number(f.tiempo_total_ms),
     primerIntento: Boolean(f.primer_intento),
     orden: Number(f.orden),
-    estimacionPct: Number(f.estimacion_pct),
+    estimacionPct: f.estimacion_pct === null ? null : Number(f.estimacion_pct),
     decision: f.decision as "aislar" | "liberar",
     estabaInfectado: Boolean(f.estaba_infectado),
     tiempoMs: Number(f.tiempo_ms),
@@ -66,7 +66,7 @@ export async function leerDificultad(
     vppObservadoPct: resumen.vppObservadoPct,
     vppTeoricoPct: resumen.vppTeoricoPct,
     pctSobreestiman: resumen.pctSobreestiman,
-    histograma: construirHistograma(primeras.map((r) => r.estimacionPct)),
+    histograma: construirHistograma(primeras.flatMap((r) => r.estimacionPct === null ? [] : [r.estimacionPct])),
     ranking: ranking.map((f) => ({
       jugador: f.jugador as string,
       puntaje: Number(f.puntaje),

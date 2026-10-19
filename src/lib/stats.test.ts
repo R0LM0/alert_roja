@@ -32,6 +32,14 @@ describe("stats", () => {
     expect(r.vppObservadoPct).toBeNull();
   });
 
+  it("ignora estimaciones nulas sin perder el conteo de decisiones", () => {
+    const r = resumir([mk(null, "aislar", false), mk(60, "liberar", false), mk(null, "aislar", true)]);
+    expect(r).toMatchObject({ n: 3, estimacionPromedioPct: 60, pctSobreestiman: 100 });
+    expect(r.pctAislados).toBeCloseTo(200 / 3);
+    expect(resumir([mk(null, "liberar", true)]).estimacionPromedioPct).toBeNull();
+    expect(resumir([mk(null, "liberar", true)]).pctSobreestiman).toBeNull();
+  });
+
   it("resumen calcula promedio y VPP observado", () => {
     const r = resumir([
       { estimacion_pct: 90, decision: "aislar", estaba_infectado: true },
@@ -76,18 +84,19 @@ describe("puntajeRespuesta", () => {
   });
 });
 
-const mk = (est: number, decision: "aislar" | "liberar", inf: boolean): Respuesta => ({
+const mk = (est: number | null, decision: "aislar" | "liberar", inf: boolean): Respuesta => ({
   estimacion_pct: est,
   decision,
   estaba_infectado: inf,
 });
 
 describe("puntajePartida", () => {
-  it("suma puntaje por paciente y 20 por decisión acorde a la realidad", () => {
-    const vpp = vppBayes(PREVALENCIA) * 100;
+  it("suma un punto por decisión acorde a la realidad", () => {
     const rs = [mk(33, "aislar", true), mk(33, "liberar", false), mk(33, "aislar", false)];
-    const base = 3 * puntajeRespuesta(33, vpp);
-    expect(puntajePartida(rs, PREVALENCIA)).toBe(base + 40);
+    expect(puntajePartida(rs, PREVALENCIA)).toBe(2);
+  });
+  it("puntúa solo aciertos, sin importar estimaciones antiguas o nulas", () => {
+    expect(puntajePartida([mk(null, "aislar", true), mk(90, "liberar", false), mk(33, "aislar", false)])).toBe(2);
   });
   it("sin respuestas = 0", () => {
     expect(puntajePartida([], PREVALENCIA)).toBe(0);
@@ -95,11 +104,15 @@ describe("puntajePartida", () => {
 });
 
 describe("insignias", () => {
-  const diez = (est: number, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
+  const diez = (est: number | null, d: "aislar" | "liberar") => Array.from({ length: 10 }, () => mk(est, d, false));
   it("bayesiano-nato con promedio en [25, 40]", () => {
     expect(insignias([...diez(25, "aislar").slice(0, 5), ...diez(40, "liberar").slice(0, 5)], PREVALENCIA)).toContain(
       "bayesiano-nato",
     );
+  });
+  it("no concede insignia de estimación sin estimaciones, ni mezcla null como cero", () => {
+    expect(insignias(diez(null, "aislar"))).toEqual(["paranoico"]);
+    expect(insignias([...diez(null, "aislar").slice(0, 9), mk(33, "liberar", false)])).toEqual(["bayesiano-nato"]);
   });
   it("paranoico si aísla a los 10", () => {
     expect(insignias(diez(90, "aislar"), PREVALENCIA)).toEqual(["paranoico"]);

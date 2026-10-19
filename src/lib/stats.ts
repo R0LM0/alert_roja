@@ -38,7 +38,7 @@ export function vpnBayes(prev = PREVALENCIA, sens = SENSIBILIDAD, esp = ESPECIFI
 }
 
 export type Respuesta = {
-  estimacion_pct: number;
+  estimacion_pct: number | null;
   decision: "aislar" | "liberar";
   estaba_infectado: boolean;
 };
@@ -70,16 +70,17 @@ export function resumir(rs: Respuesta[], prev = PREVALENCIA): Resumen {
       liberadosInfectados: 0,
     };
   }
-  const suma = rs.reduce((a, r) => a + r.estimacion_pct, 0);
+  const estimaciones = rs.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
+  const suma = estimaciones.reduce((a, pct) => a + pct, 0);
   const infectados = rs.filter((r) => r.estaba_infectado).length;
-  const sobre = rs.filter((r) => r.estimacion_pct > vppTeorico).length;
+  const sobre = estimaciones.filter((pct) => pct > vppTeorico).length;
   const aislados = rs.filter((r) => r.decision === "aislar").length;
   return {
     n,
-    estimacionPromedioPct: suma / n,
+    estimacionPromedioPct: estimaciones.length ? suma / estimaciones.length : null,
     vppObservadoPct: (infectados / n) * 100,
     vppTeoricoPct: vppTeorico,
-    pctSobreestiman: (sobre / n) * 100,
+    pctSobreestiman: estimaciones.length ? (sobre / estimaciones.length) * 100 : null,
     pctAislados: (aislados / n) * 100,
     aisladosSanos: rs.filter((r) => r.decision === "aislar" && !r.estaba_infectado).length,
     liberadosInfectados: rs.filter((r) => r.decision === "liberar" && r.estaba_infectado).length,
@@ -104,15 +105,9 @@ export function decisionAcertada(r: Respuesta): boolean {
   return (r.decision === "aislar") === r.estaba_infectado;
 }
 
-export const BONO_DECISION = 20;
-
-/** Puntaje de una partida: estimaciones + 20 por cada decisión acorde a la realidad. */
-export function puntajePartida(rs: Respuesta[], prev = PREVALENCIA): number {
-  const vppPct = vppBayes(prev) * 100;
-  return rs.reduce(
-    (a, r) => a + puntajeRespuesta(r.estimacion_pct, vppPct) + (decisionAcertada(r) ? BONO_DECISION : 0),
-    0,
-  );
+/** Un acierto por paciente correctamente aislado o liberado. */
+export function puntajePartida(rs: Respuesta[], _prev = PREVALENCIA): number {
+  return rs.filter(decisionAcertada).length;
 }
 
 export type Insignia = "bayesiano-nato" | "paranoico" | "confiado";
@@ -121,8 +116,9 @@ export type Insignia = "bayesiano-nato" | "paranoico" | "confiado";
 export function insignias(rs: Respuesta[], _prev = PREVALENCIA): Insignia[] {
   if (rs.length === 0) return [];
   const out: Insignia[] = [];
-  const promedio = rs.reduce((a, r) => a + r.estimacion_pct, 0) / rs.length;
-  if (promedio >= 25 && promedio <= 40) out.push("bayesiano-nato");
+  const estimaciones = rs.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
+  const promedio = estimaciones.reduce((a, e) => a + e, 0) / estimaciones.length;
+  if (estimaciones.length && promedio >= 25 && promedio <= 40) out.push("bayesiano-nato");
   if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "aislar")) out.push("paranoico");
   if (rs.length === PACIENTES_POR_RONDA && rs.every((r) => r.decision === "liberar")) out.push("confiado");
   return out;

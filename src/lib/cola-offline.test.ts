@@ -45,6 +45,21 @@ describe("idempotencia", () => {
     expect(cola.pendientes()).toEqual([]);
   });
 
+  it("conserva estimaciones nulas al reintentar sin cambiar el payload", async () => {
+    const sinEstimacion = { ...conId(), respuestas: conId().respuestas.map((r) => ({ ...r, estimacion_pct: null })) };
+    const cola = crearCola(almacenFalso());
+    cola.encolar(sinEstimacion);
+    const cuerpos: string[] = [];
+    await cola.reintentar(async (p) => {
+      await enviarSinCola(p, (_url, init) => {
+        cuerpos.push(String(init.body));
+        return respuesta(200, { id, puntaje: 5 });
+      });
+      return true;
+    });
+    expect(JSON.parse(cuerpos[0])).toEqual(sinEstimacion);
+  });
+
   it("un 200 (partida ya existente) cuenta como guardado", async () => {
     const r = await enviarSinCola(conId(), () => respuesta(200, { id, puntaje: 40 }));
     expect(r).toEqual({ estado: "guardado", id, puntaje: 40 });

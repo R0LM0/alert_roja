@@ -11,6 +11,18 @@ const base = () => {
   );
 };
 
+describe("respuestaSchema.estimacion_pct", () => {
+  it("acepta null u omisión y sigue rechazando porcentajes inválidos", () => {
+    const original = base();
+    const sin = original.respuestas.map(({ estimacion_pct: _estimacion, ...r }) => r);
+    expect(partidaSchema.safeParse({ ...original, respuestas: sin }).success).toBe(true);
+    expect(partidaSchema.safeParse({ ...original, respuestas: original.respuestas.map((r) => ({ ...r, estimacion_pct: null })) }).success).toBe(true);
+    for (const invalida of [-1, 101, 1.5, "50"]) {
+      expect(partidaSchema.safeParse({ ...original, respuestas: [{ ...original.respuestas[0], estimacion_pct: invalida }, ...original.respuestas.slice(1)] }).success).toBe(false);
+    }
+  });
+});
+
 describe("partidaSchema.id (clave de idempotencia)", () => {
   it("es opcional: sin id sigue siendo válido (retrocompatible)", () => {
     expect(partidaSchema.safeParse(base()).success).toBe(true);

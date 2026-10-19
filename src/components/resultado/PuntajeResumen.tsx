@@ -14,7 +14,7 @@ function Fila({ f, estimacionTexto }: { f: FilaPaciente; estimacionTexto: (pct: 
     <li className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{f.orden}. {f.nombre}</span>
-        <span className="font-display text-lg font-bold tabular-nums">+{f.puntaje} pts</span>
+        <span className="font-display text-lg font-bold tabular-nums">+{f.puntaje} acierto{f.puntaje === 1 ? "" : "s"}</span>
       </div>
       <p className="flex items-center gap-1.5 text-sm">
         {f.estaba_infectado ? (
@@ -25,7 +25,8 @@ function Fila({ f, estimacionTexto }: { f: FilaPaciente; estimacionTexto: (pct: 
         {f.estaba_infectado ? "Estaba infectado" : "Estaba sano"}
       </p>
       <p className="text-sm text-muted">
-        Estimaste {estimacionTexto(f.estimacionPct)} · {f.decision === "aislar" ? "Aislar" : "Liberar"}
+        {f.estimacionPct !== null ? `Estimaste ${estimacionTexto(f.estimacionPct)} · ` : ""}
+        {f.decision === "aislar" ? "Aislar" : "Liberar"}
       </p>
       <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
         {f.decisionAcertada ? (
@@ -33,8 +34,7 @@ function Fila({ f, estimacionTexto }: { f: FilaPaciente; estimacionTexto: (pct: 
         ) : (
           <X className="size-4 text-primary-text" aria-hidden="true" />
         )}
-        {f.decisionAcertada ? "Decisión acertada (+20)" : "Decisión errada (+0)"}
-        <span className="font-normal text-muted">· estimación +{f.puntajeEstimacion}</span>
+        {f.decisionAcertada ? "Decisión acertada (+1)" : "Decisión errada (+0)"}
       </p>
     </li>
   );
@@ -47,7 +47,7 @@ export function PuntajeResumen({ total, infectadosEnRonda, filas, estimacionText
       <div className="text-center">
         <p className="font-display text-6xl font-bold tabular-nums">{total}</p>
         <p className="text-muted">
-          puntos · {infectadosEnRonda} de {filas.length} pacientes estaban infectados
+          aciertos de {filas.length} · {infectadosEnRonda} de {filas.length} pacientes estaban infectados
         </p>
       </div>
       <h3 className="font-semibold">Paciente por paciente</h3>

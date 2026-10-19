@@ -33,6 +33,16 @@ describe("sesion-juego", () => {
     expect(leerResultado(a)).toEqual(resultado());
   });
 
+  it("recupera resultados nuevos con estimaciones nulas y antiguos con estimaciones", () => {
+    const a = almacen();
+    const antiguo = resultado();
+    guardarResultado(antiguo, a);
+    expect(leerResultado(a)?.respuestas[0].estimacion_pct).toBe(40);
+    const nuevo = { ...antiguo, respuestas: antiguo.respuestas.map((r) => ({ ...r, estimacion_pct: null })) };
+    guardarResultado(nuevo, a);
+    expect(leerResultado(a)).toEqual(nuevo);
+  });
+
   it("limpiar borra el resultado", () => {
     const a = almacen();
     guardarResultado(resultado(), a);
