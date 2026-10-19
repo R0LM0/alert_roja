@@ -43,7 +43,8 @@ Toda la estadística vive en `src/lib` (por ejemplo `stats.ts`); los componentes
 | --- | --- | --- |
 | `DATABASE_URL` | Sí | Conexión a Postgres. Si contiene `neon.tech` se usa el driver de Neon; si no, `pg`. |
 | `NEXT_PUBLIC_SITE_URL` | Recomendada | URL pública del juego; es la que codifica el QR del panel. Si falta, se usa la URL desde la que se abrió el panel. |
-| `PANEL_KEY` | Opcional | Si se define, `/api/export` (Excel y CSV) exige `?key=<PANEL_KEY>`. |
+| `PANEL_KEY` | Opcional | Si se define, `/api/export` (Excel y CSV) exige `?key=<PANEL_KEY>`. `/podio` exige la clave siempre: sin `PANEL_KEY` no se muestra. |
+| `CIERRE_FERIA` | Opcional | Hora de cierre con zona, ej. `2026-10-20T18:00:00-06:00`. Las partidas creadas después no cuentan en el ranking ni en el podio. Si es inválida se ignora (aviso en consola). |
 
 ## Correr en local
 
@@ -106,6 +107,15 @@ El límite de peticiones por IP vive en memoria: en Vercel es **por instancia se
 - **Ranking**: solo cuenta el **primer intento por apodo** (sin distinguir mayúsculas ni espacios) en cada dificultad; el desempate es el **menor tiempo total** y luego la partida más antigua. Los intentos siguientes se guardan, pero no entran al ranking ni a las estadísticas del público (histograma, promedio, VPP observado, % que sobreestimó). El contador en vivo sí cuenta todas las partidas.
 - **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). La hoja Histograma incluye un gráfico de columnas nativo (editable en Excel) por dificultad, con el tramo del VPP teórico resaltado. El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
 - Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".
+
+## Día de la feria
+
+1. `npm run db:migrate` (aplica migraciones pendientes).
+2. `npm run db:reset-feria -- --confirmar` vacía partidas, respuestas y apodos, y reinicia los ids. Sin `--confirmar` solo muestra a qué base se conecta y los conteos.
+3. Define `CIERRE_FERIA` con la hora de cierre (ej. `2026-10-20T18:00:00-06:00`) y reinicia el servidor.
+4. Abre `/podio?key=TU_CLAVE` para ver el top 3 de Normal y Experto. El botón **Revelar** muestra 3.º, 2.º y 1.º.
+
+El podio avisa de **empates** (mismo puntaje y tiempo) y de **mismo dispositivo** en más de un puesto. No excluye a nadie: el organizador decide.
 
 ## Tests
 

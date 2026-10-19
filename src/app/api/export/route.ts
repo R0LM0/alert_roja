@@ -1,6 +1,6 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { errorJson, logError } from "@/lib/api";
 import { aCsv } from "@/lib/csv";
+import { claveValida } from "@/lib/clave";
 import { cargarDatosExport, leerRespuestas } from "@/lib/export-datos";
 import { generarXlsxConGraficos } from "@/lib/export-xlsx";
 
@@ -22,12 +22,6 @@ const CABECERA_CSV = [
 ];
 
 const TIPO_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-/** Comparación en tiempo constante (se comparan hashes de igual longitud). */
-function claveValida(recibida: string | null, esperada: string): boolean {
-  const h = (s: string) => createHash("sha256").update(s).digest();
-  return timingSafeEqual(h(recibida ?? ""), h(esperada));
-}
 
 /** Fecha de hoy en Managua (UTC−6) como YYYY-MM-DD, para el nombre del archivo. */
 function fechaArchivo(d: Date): string {

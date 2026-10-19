@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { errorJson, leerPrevalencia, logError } from "@/lib/api";
 import type { Evidencia } from "@/lib/caso-bayesiano";
+import { cierreFeria } from "@/lib/cierre";
 import { sql } from "@/lib/db";
-import { INICIO_TEMPORADA_ACTUAL } from "@/lib/ranking";
+import { leerRankingTemporada } from "@/lib/ranking-consulta";
 import { insignias, PREVALENCIA_EXPERTO, type Respuesta } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
@@ -12,21 +13,7 @@ export async function GET(req: Request) {
   if (prev === "invalida") return errorJson(400, "prevalencia debe ser 0.1 o 0.01");
 
   try {
-    // Primer intento dentro de la temporada (no el histórico de primer_intento): quien jugó
-    // antes del inicio de la temporada vuelve a entrar con su primera partida nueva.
-    const filas = await sql()`
-      with temporada as (
-        select distinct on (lower(btrim(jugador)), prevalencia)
-          id::text as id, jugador, puntaje, prevalencia, creada_en, tiempo_total_ms
-        from partidas
-        where (${prev}::numeric is null or prevalencia = ${prev}::numeric)
-          and creada_en >= ${INICIO_TEMPORADA_ACTUAL}::timestamptz
-        order by lower(btrim(jugador)), prevalencia, creada_en, id
-      )
-      select * from temporada
-      order by puntaje desc, tiempo_total_ms asc nulls last, creada_en asc
-      limit 10
-    `;
+    const filas = await leerRankingTemporada({ prevalencia: prev, cierre: cierreFeria(), limite: 10 });
     // Consultar solo las rondas ya seleccionadas: una consulta adicional, no una por jugador.
     const respuestas = filas.length ? await sql()`
       select partida_id::text as partida_id, orden, estimacion_pct, decision, evidencia, estaba_infectado
@@ -48,15 +35,16 @@ export async function GET(req: Request) {
       porPartida.set(id, partida);
     }
     return NextResponse.json({
+      // Sin id ni dueno: el público no recibe ni la partida ni el dispositivo.
       ranking: filas.map((f) => ({
         jugador: f.jugador,
-        puntaje: Number(f.puntaje),
-        prevalencia: Number(f.prevalencia),
-        tiempoTotalMs: f.tiempo_total_ms === null ? null : Number(f.tiempo_total_ms),
-        creada_en: new Date(f.creada_en as string).toISOString(),
-        insignias: insignias(porPartida.get(f.id as string) ?? [], {
-          modo: Number(f.prevalencia) === PREVALENCIA_EXPERTO ? "experto" : "normal",
-          ronda: (porPartida.get(f.id as string) ?? []).map((r) => ({ orden: r.orden, evidencia: r.evidencia })),
+        puntaje: f.puntaje,
+        prevalencia: f.prevalencia,
+        tiempoTotalMs: f.tiempoTotalMs,
+        creada_en: f.creada_en,
+        insignias: insignias(porPartida.get(f.id) ?? [], {
+          modo: f.prevalencia === PREVALENCIA_EXPERTO ? "experto" : "normal",
+          ronda: (porPartida.get(f.id) ?? []).map((r) => ({ orden: r.orden, evidencia: r.evidencia })),
         }),
       })),
     });
