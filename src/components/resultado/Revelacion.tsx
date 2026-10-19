@@ -73,8 +73,6 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
   }, [resultado, calculo.insignias]);
 
   const esPuntajeAlto = calculo.esPuntajeAlto;
-  const decisionesAcertadas = calculo.filas.filter((f) => f.decisionAcertada).length;
-  const mayoriaAcertada = decisionesAcertadas * 2 >= calculo.filas.length;
   // El festejo mira el destino de la ciudad, no solo el puntaje: con un infectado
   // liberado la ciudad se contagia y celebrar contradiría el final.
   const ciudadSalvada = calcularVeredicto(calculo.filas).estado === "salvada";
@@ -95,14 +93,14 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
     const alCerrar = setTimeout(() => {
       if (cerrada.current) return;
       cerrada.current = true;
-      playRef.current(mayoriaAcertada ? "acierto" : "error");
+      playRef.current("resultado");
       if (esPuntajeAlto && ciudadSalvada) festejar(); // no hace nada con movimiento reducido
     }, reducido ? 400 : RETARDO_CIERRE_MS);
     return () => {
       clearTimeout(aTabla);
       clearTimeout(alCerrar);
     };
-  }, [esPuntajeAlto, ciudadSalvada, mayoriaAcertada]);
+  }, [esPuntajeAlto, ciudadSalvada]);
 
   function jugar(destino: Modo) {
     limpiar();

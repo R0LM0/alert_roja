@@ -9,7 +9,6 @@ import { PatientAvatar } from "@/components/game/patient-avatar";
 import { PositivoStamp } from "@/components/game/positivo-stamp";
 import { EVIDENCIAS, type Evidencia } from "@/lib/caso-bayesiano";
 import type { Decision, PacienteRonda } from "@/lib/ronda";
-import { useSonido } from "@/lib/sound";
 
 /** Distancia (px) y velocidad (px/s) mínimas para que un deslizamiento cuente como decisión. */
 const UMBRAL_PX = 90;
@@ -29,13 +28,11 @@ type TarjetaPacienteProps = {
  */
 export function TarjetaPaciente({ paciente, evidencia, onDecidir, disabled }: TarjetaPacienteProps) {
   const reducido = useReducedMotion();
-  const { play } = useSonido();
   const [decision, setDecision] = useState<Decision | null>(null);
 
   function decidir(elegida: Decision) {
     if (disabled || decision) return;
     setDecision(elegida);
-    play("click");
     onDecidir(elegida);
   }
   const controles = useDragControls();

@@ -1,21 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ShieldAlert } from "lucide-react";
-import { useSonido } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 
 /** Sello "POSITIVO": icono + texto (nunca solo color). Estático con movimiento reducido. */
 export function PositivoStamp({ className }: { className?: string }) {
   const reducido = useReducedMotion();
-  const { play } = useSonido();
-  // Suena al aparecer el sello (nuevo paciente); `play` no suena si está silenciado.
-  // Solo al montar: si cambia `play` (des/silenciar) no debe repetirse.
-  useEffect(() => {
-    play("alerta");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   return (
     <motion.div
       role="img"

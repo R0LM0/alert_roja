@@ -127,4 +127,4 @@ El test E2E construye y levanta la app de producción en el puerto 3116 e interc
 
 ## Créditos y licencias
 
-Tipografías, iconos, avatares y sonidos usan licencias libres, documentadas una por una en [CREDITS.md](CREDITS.md). Los assets se sirven desde `public/`, sin CDN en tiempo de ejecución.
+Tipografías, iconos y avatares usan licencias libres, documentadas una por una en [CREDITS.md](CREDITS.md). Los assets se sirven desde el propio sitio, sin CDN en tiempo de ejecución; el sonido se sintetiza en el navegador.

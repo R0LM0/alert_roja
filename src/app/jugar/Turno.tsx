@@ -30,6 +30,7 @@ import {
   type RespuestaUI,
 } from "@/lib/ronda";
 import { guardarResultado, leerApodo } from "@/lib/sesion-juego";
+import { useAmbienteClinica, useSonido } from "@/lib/sound";
 
 const SEGUNDOS_POR_PACIENTE = 15;
 
@@ -59,6 +60,9 @@ export function Turno({ modo }: { modo: Modo }) {
   const [saliendoPaciente, setSaliendoPaciente] = useState(false);
   const [salidaPaciente, setSalidaPaciente] = useState<"cuarentena" | "puerta" | null>(null);
   const movimientoReducido = useReducedMotion() ?? false;
+  const { play } = useSonido();
+  // Ambiente de consultorio: suena con la escena lista y se funde al terminar la ronda.
+  useAmbienteClinica(fase === "jugando" && escenaLista);
 
   const respuestas = useRef<RespuestaUI[]>([]);
   const inicioPaciente = useRef(0);
@@ -138,6 +142,7 @@ export function Turno({ modo }: { modo: Modo }) {
   function decidir(decision: Decision, porTiempo = false) {
     if (fase !== "jugando" || ocupado.current) return;
     ocupado.current = true;
+    play(decision);
     respuestas.current = [
       ...respuestas.current,
       {
@@ -257,7 +262,10 @@ export function Turno({ modo }: { modo: Modo }) {
         semillaPaciente={paciente.seed}
         saliendoPaciente={saliendoPaciente}
         salidaPaciente={salidaPaciente}
-        alLlegarPaciente={() => setLlegoPaciente(true)}
+        alLlegarPaciente={() => {
+          setLlegoPaciente(true);
+          play("llegada");
+        }}
       />
       <p className="sr-only" aria-live="polite">
         Paciente {indice + 1} de {ronda.length}
