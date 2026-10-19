@@ -1,4 +1,4 @@
-import { EVIDENCIAS, posteriorBayes, puntosPorDecision, type Evidencia, type ModalidadCaso } from "./caso-bayesiano";
+import { EVIDENCIAS, accionOptima, posteriorBayes, puntosPorDecision, type Evidencia, type ModalidadCaso } from "./caso-bayesiano";
 
 /** Parámetros del escenario (catálogo, juegos 24 y 39). */
 export const PREVALENCIA = 0.1;
@@ -43,6 +43,8 @@ export type Respuesta = {
   estimacion_pct: number | null;
   decision: "aislar" | "liberar";
   estaba_infectado: boolean;
+  /** Milisegundos que el jugador tardó en el paciente; ausente en filas sin tiempo. */
+  tiempo_ms?: number;
 };
 
 export type Resumen = {
@@ -112,9 +114,14 @@ type ContextoDecision = {
   ronda: readonly { orden: number; evidencia?: Evidencia }[];
 };
 
+function modoDeContexto(contexto: ContextoDecision | number): ModalidadCaso {
+  if (typeof contexto !== "number") return contexto.modo;
+  return contexto === PREVALENCIA_EXPERTO ? "experto" : "normal";
+}
+
 /** Una evidencia ausente (filas antiguas) usa sin antecedentes. El argumento numérico sigue admitiendo llamadas legacy. */
 export function puntajePartida(rs: Respuesta[], contexto: ContextoDecision | number = PREVALENCIA): number {
-  const modo = typeof contexto === "number" ? (contexto === PREVALENCIA_EXPERTO ? "experto" : "normal") : contexto.modo;
+  const modo = modoDeContexto(contexto);
   const porOrden = typeof contexto === "number" ? null : new Map(contexto.ronda.map((p) => [p.orden, p.evidencia]));
   return rs.reduce((total, r, i) => {
     const orden = "orden" in r && typeof r.orden === "number" ? r.orden : i + 1;
@@ -123,7 +130,41 @@ export function puntajePartida(rs: Respuesta[], contexto: ContextoDecision | num
   }, 0);
 }
 
-export type Insignia = "perfecto" | "ojo-clinico" | "cazador" | "bayesiano-nato";
+export type Insignia =
+  | "perfecto"
+  | "ojo-clinico"
+  | "cazador"
+  | "bayesiano-nato"
+  | "experto"
+  | "rayo"
+  | "sin-panico";
+
+/** Rayo: la suma de los tiempos de la ronda queda por debajo de este límite (1 minuto). */
+export const TIEMPO_RAYO_MS = 60_000;
+/** Experto: decisiones de mayor valor esperado necesarias en modo experto. */
+export const ACIERTOS_EXPERTO = 7;
+
+/** Poca evidencia: tras el positivo, la probabilidad no llega al umbral para aislar. */
+function evidenciaBaja(evidencia: Evidencia, modo: ModalidadCaso): boolean {
+  return accionOptima(posteriorBayes(EVIDENCIAS[evidencia].previo[modo])) === "liberar";
+}
+
+/** Sin pánico: ningún sano de poca evidencia aislado, y la ronda tuvo al menos uno de esos pacientes. */
+function sinPanico(rs: Respuesta[], contexto: ContextoDecision | number): boolean {
+  if (typeof contexto === "number") return false;
+  const porOrden = new Map(contexto.ronda.map((p) => [p.orden, p.evidencia]));
+  const bajos = rs.flatMap((r, i) => {
+    const evidencia = porOrden.get("orden" in r && typeof r.orden === "number" ? r.orden : i + 1);
+    return evidencia && evidenciaBaja(evidencia, contexto.modo) ? [r] : [];
+  });
+  return bajos.length > 0 && bajos.every((r) => !(r.decision === "aislar" && !r.estaba_infectado));
+}
+
+/** Rayo exige tiempo en cada paciente; las filas sin tiempo no pueden ganarla. */
+function rapida(rs: Respuesta[]): boolean {
+  if (!rs.every((r) => r.tiempo_ms !== undefined)) return false;
+  return rs.reduce((total, r) => total + (r.tiempo_ms ?? 0), 0) < TIEMPO_RAYO_MS;
+}
 
 /** Insignias de decisión para rondas completas; la de estimación sobrevive solo en filas legacy. */
 export function insignias(rs: Respuesta[], contexto: ContextoDecision | number = PREVALENCIA): Insignia[] {
@@ -135,6 +176,9 @@ export function insignias(rs: Respuesta[], contexto: ContextoDecision | number =
     else if (aciertos >= 8) out.push("ojo-clinico");
     const infectados = rs.filter((r) => r.estaba_infectado);
     if (infectados.length > 0 && infectados.every((r) => r.decision === "aislar")) out.push("cazador");
+    if (modoDeContexto(contexto) === "experto" && aciertos >= ACIERTOS_EXPERTO) out.push("experto");
+    if (rapida(rs)) out.push("rayo");
+    if (sinPanico(rs, contexto)) out.push("sin-panico");
   }
   const estimaciones = rs.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
   if (estimaciones.length) {

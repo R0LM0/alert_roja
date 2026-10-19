@@ -13,7 +13,8 @@ const CLAVE_APODO_SESION = "alerta-roja:apodo-sesion";
 const CLAVE_APODO_RECUERDO = "alerta-roja:apodo";
 const CLAVE_INSIGNIAS = "alerta-roja:insignias";
 const MAX_APODOS_INSIGNIAS = 20;
-const MAX_INSIGNIAS = 4;
+/** Cada medalla del catálogo puede guardarse una vez por apodo. */
+const MAX_INSIGNIAS = IDS_INSIGNIAS.length;
 
 // Persistimos solo el id y la primera fecha; los textos e iconos se resuelven al pintar.
 const insigniaGuardadaSchema = z.object({

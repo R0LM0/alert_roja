@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlmacenTexto } from "./cola-offline";
-import { resolverInsignias } from "./insignias";
+import { IDS_INSIGNIAS, resolverInsignias } from "./insignias";
 import { armarPartida, crearRonda } from "./ronda";
 import { guardarApodo, guardarInsignias, guardarResultado, leerApodo, leerInsignias, leerResultado, limpiar, limpiarInsignias, validarApodo } from "./sesion-juego";
 import type { InsigniaInfo } from "./resultado";
@@ -65,6 +65,12 @@ describe("insignias locales", () => {
     expect(leerInsignias("Ana", a)).toEqual([
       { id: "perfecto", fecha: "2026-10-19T10:00:00.000Z" },
     ]);
+  });
+
+  it("guarda todas las medallas del catálogo sin llegar al tope", () => {
+    const a = almacen();
+    guardarInsignias("Ana", resolverInsignias(IDS_INSIGNIAS), a);
+    expect(leerInsignias("Ana", a).map((i) => i.id)).toEqual(IDS_INSIGNIAS);
   });
 
   it("ignora ids desconocidos y no crea apodos vacíos", () => {
