@@ -255,6 +255,7 @@ export function Turno({ modo }: { modo: Modo }) {
       <Consultorio3D
         alListo={alEstarListo}
         semillaPaciente={paciente.seed}
+        nombrePaciente={paciente.nombre}
         saliendoPaciente={saliendoPaciente}
         salidaPaciente={salidaPaciente}
         alLlegarPaciente={() => setLlegoPaciente(true)}
