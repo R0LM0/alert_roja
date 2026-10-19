@@ -12,11 +12,18 @@ export async function GET(req: Request) {
   if (prev === "invalida") return errorJson(400, "prevalencia debe ser 0.1 o 0.01");
 
   try {
+    // Primer intento dentro de la temporada (no el histórico de primer_intento): quien jugó
+    // antes del inicio de la temporada vuelve a entrar con su primera partida nueva.
     const filas = await sql()`
-      select id::text as id, jugador, puntaje, prevalencia, creada_en, tiempo_total_ms
-      from partidas
-      where primer_intento and (${prev}::numeric is null or prevalencia = ${prev}::numeric)
-        and creada_en >= ${INICIO_TEMPORADA_ACTUAL}::timestamptz
+      with temporada as (
+        select distinct on (lower(btrim(jugador)), prevalencia)
+          id::text as id, jugador, puntaje, prevalencia, creada_en, tiempo_total_ms
+        from partidas
+        where (${prev}::numeric is null or prevalencia = ${prev}::numeric)
+          and creada_en >= ${INICIO_TEMPORADA_ACTUAL}::timestamptz
+        order by lower(btrim(jugador)), prevalencia, creada_en, id
+      )
+      select * from temporada
       order by puntaje desc, tiempo_total_ms asc nulls last, creada_en asc
       limit 10
     `;

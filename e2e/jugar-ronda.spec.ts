@@ -100,7 +100,7 @@ test("una ronda completa en el celular: de la portada a la revelación", async (
   // por valor esperado (depende de la ronda y de las decisiones), así que se
   // asertan la forma del marcador y el rótulo, no el número del mock.
   await expect(page.getByText(/^\d+\s*\/\s*10$/)).toBeVisible();
-  await expect(page.getByText("decisiones de mayor valor esperado")).toBeVisible();
+  await expect(page.getByText("decisiones de mayor valor esperado", { exact: true })).toBeVisible();
   await expect(page.getByText("La fórmula de Bayes, paso a paso")).toBeVisible();
 
   const tabla = page.getByRole("table", { name: /Tabla 2x2/ });

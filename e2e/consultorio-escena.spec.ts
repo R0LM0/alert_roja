@@ -18,6 +18,10 @@ function vigilarErrores(page: Page): string[] {
 
 async function capturarFlujo(page: Page, nombre: string) {
   const errores = vigilarErrores(page);
+  // Sin base: la reserva del apodo se simula (el mismo apodo se usa en los dos anchos).
+  await page.route("**/api/apodos", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) }),
+  );
   await page.goto("/");
   await page.getByLabel("Tu apodo").fill("Capturas");
   await page.getByRole("button", { name: "¡Empezar turno!" }).click();
