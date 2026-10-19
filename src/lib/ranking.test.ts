@@ -1,5 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { compararRanking, construirHistograma, formatearTiempoTotal, normalizarApodo, seleccionarPrimerosIntentos } from "./ranking";
+import { resolverInsignias } from "./insignias";
+import {
+  compararRanking,
+  construirHistograma,
+  enTemporadaActual,
+  ETIQUETA_TEMPORADA_ACTUAL,
+  formatearTiempoTotal,
+  INICIO_TEMPORADA_ACTUAL,
+  informacionInsignias,
+  NOMBRE_TEMPORADA_ACTUAL,
+  normalizarApodo,
+  seleccionarPrimerosIntentos,
+} from "./ranking";
+
+describe("temporada actual del ranking", () => {
+  it("define la temporada de decisiones y explica el archivo histórico", () => {
+    expect(INICIO_TEMPORADA_ACTUAL).toBe("2026-10-19T00:00:00.000Z");
+    expect(NOMBRE_TEMPORADA_ACTUAL).toBe("Decisiones");
+    expect(ETIQUETA_TEMPORADA_ACTUAL).toBe(
+      "Temporada actual: decisiones (desde el 19/10/2026). Las partidas anteriores quedan archivadas.",
+    );
+  });
+  it("excluye las partidas anteriores al inicio", () => {
+    expect(enTemporadaActual("2026-10-18T23:59:59.999Z")).toBe(false);
+  });
+  it("incluye el instante exacto de inicio", () => {
+    expect(enTemporadaActual("2026-10-19T00:00:00.000Z")).toBe(true);
+  });
+  it("incluye los instantes posteriores incluso con otra zona horaria", () => {
+    expect(enTemporadaActual("2026-10-18T21:00:00.001-03:00")).toBe(true);
+  });
+  it("excluye fechas inválidas", () => {
+    expect(enTemporadaActual("fecha inválida")).toBe(false);
+  });
+  it("mantiene el orden por puntaje aun entre partidas de distintas temporadas", () => {
+    const antigua = { puntaje: 100, tiempoTotalMs: 50_000, creadaEn: "2026-10-18T23:59:59.999Z" };
+    const actual = { puntaje: 10, tiempoTotalMs: 50_000, creadaEn: "2026-10-19T00:00:00.000Z" };
+    expect(compararRanking(antigua, actual)).toBeLessThan(0);
+  });
+});
 
 describe("formatearTiempoTotal", () => {
   it("formatea m:ss", () => {
@@ -55,6 +94,29 @@ describe("seleccionarPrimerosIntentos", () => {
     ];
     const r = seleccionarPrimerosIntentos(filas);
     expect(r.map((x) => x.creadaEn)).toEqual(["2026-01-01T10:00:00Z", "2026-01-01T10:09:00Z", "2026-01-01T10:01:00Z"]);
+  });
+});
+
+describe("informacionInsignias", () => {
+  it("traduce los ids al título e icono del resultado en el mismo orden", () => {
+    expect(informacionInsignias(["perfecto", "ojo-clinico", "cazador", "bayesiano-nato"])).toEqual([
+      { id: "perfecto", titulo: "Ronda perfecta", icono: "smile" },
+      { id: "ojo-clinico", titulo: "Ojo clínico", icono: "brain" },
+      { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
+      { id: "bayesiano-nato", titulo: "Bayesiano nato", icono: "brain" },
+    ]);
+  });
+  it("ignora los ids desconocidos sin crear chips vacíos", () => {
+    expect(informacionInsignias(["desconocido", "cazador"])).toEqual([
+      { id: "cazador", titulo: "Cazador de contagios", icono: "shield-check" },
+    ]);
+  });
+  it("usa los mismos títulos e iconos del catálogo y omite ids retirados", () => {
+    const ids = ["ojo-clinico", "retirada", "perfecto"];
+    expect(informacionInsignias(ids)).toEqual(resolverInsignias(ids).map(({ id, titulo, icono }) => ({ id, titulo, icono })));
+  });
+  it("devuelve una lista vacía si no hay insignias", () => {
+    expect(informacionInsignias([])).toEqual([]);
   });
 });
 

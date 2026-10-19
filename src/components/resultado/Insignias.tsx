@@ -1,36 +1,47 @@
-import { Brain, ShieldAlert, Smile, type LucideIcon } from "lucide-react";
+"use client";
+
+import { useEffect } from "react";
+import { ColeccionInsignias, Medalla } from "@/components/insignias/ColeccionInsignias";
 import { Card, CardTitle } from "@/components/ui/card";
-import type { InsigniaInfo } from "@/lib/resultado";
+import type { InsigniaInfo, MedallaInsignia } from "@/lib/insignias";
+import { useSonido } from "@/lib/sound";
 
-const ICONOS: Record<InsigniaInfo["icono"], LucideIcon> = { brain: Brain, "shield-alert": ShieldAlert, smile: Smile };
+/** Historial de insignias de este apodo en este dispositivo (sin tarjeta si está vacío). */
+export function HistorialInsignias({ insignias }: { insignias: InsigniaInfo[] }) {
+  if (!insignias.length) return null;
+  return (
+    <Card className="flex flex-col gap-3">
+      <CardTitle>Tus insignias</CardTitle>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {insignias.map((i) => (
+          <li key={i.id} className="flex min-w-0 items-center gap-2 rounded-lg bg-surface-2 p-2">
+            <Medalla icono={i.icono} ganada compacto />
+            <span className="min-w-0 text-sm font-semibold leading-snug">{i.titulo}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
 
-export function Insignias({ insignias }: { insignias: InsigniaInfo[] }) {
+/** Todas las medallas de esta ronda: las ganadas brillan; las demás aparecen bloqueadas con su requisito. */
+export function Insignias({ medallas }: { medallas: MedallaInsignia[] }) {
+  const ganadas = medallas.filter((m) => m.ganada).length;
+  const { play } = useSonido();
+  // Destello al ganar: suena una vez, al montar, cuando entra la primera medalla.
+  useEffect(() => {
+    if (ganadas === 0) return;
+    const id = setTimeout(() => play("insignia"), 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <Card className="flex flex-col gap-3">
       <CardTitle>Insignias</CardTitle>
-      {insignias.length === 0 ? (
-        <p className="text-muted">Esta vez no ganaste insignias. ¡Inténtalo otra vez!</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {insignias.map((i) => {
-            const Icono = ICONOS[i.icono];
-            return (
-              <li key={i.id} className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
-                <span
-                  className="flex size-11 shrink-0 items-center justify-center rounded-full bg-warning text-warning-foreground"
-                  aria-hidden="true"
-                >
-                  <Icono className="size-6" />
-                </span>
-                <div>
-                  <p className="font-display text-lg font-semibold">{i.titulo}</p>
-                  <p className="text-sm text-muted">{i.descripcion}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <p className="text-sm text-muted">
+        {ganadas === 0 ? "Esta vez no ganaste insignias. ¡Inténtalo otra vez!" : `Ganaste ${ganadas} de ${medallas.length}.`}
+      </p>
+      <ColeccionInsignias medallas={medallas} />
     </Card>
   );
 }

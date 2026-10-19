@@ -3,30 +3,19 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { neon } from "@neondatabase/serverless";
-import pg from "pg";
+import { abrirConexion } from "./conexion.mjs";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("Falta DATABASE_URL (definila en .env.local o en el entorno).");
+let conexion;
+try {
+  conexion = abrirConexion();
+} catch (e) {
+  console.error(e.message);
   process.exit(1);
 }
+const { query, cerrar } = conexion;
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "db", "migrations");
 const archivos = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
-
-// Mismo criterio que src/lib/db.ts: neon.tech -> driver Neon, si no pg.
-let query;
-let cerrar = async () => {};
-if (url.includes("neon.tech")) {
-  // El driver HTTP no soporta channel_binding (Neon lo agrega al copiar la URL).
-  const db = neon(url.replace(/([?&])channel_binding=[^&]*&?/, "$1").replace(/[?&]$/, ""));
-  query = (texto, params = []) => db.query(texto, params);
-} else {
-  const pool = new pg.Pool({ connectionString: url, max: 1 });
-  query = async (texto, params = []) => (await pool.query(texto, params)).rows;
-  cerrar = () => pool.end();
-}
 
 try {
   await query(

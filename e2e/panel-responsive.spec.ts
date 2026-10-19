@@ -7,25 +7,24 @@ const VISTAS = [
   { nombre: "390x844", width: 390, height: 844 },
 ] as const;
 
-const CUBETAS = Array.from({ length: 10 }, (_, i) => ({
-  desde: i * 10,
-  hasta: i === 9 ? 100 : i * 10 + 9,
-  cantidad: [0, 1, 3, 6, 9, 5, 4, 2, 1, 1][i],
-}));
+const POR_EVIDENCIA = [
+  { evidencia: "protegido", etiqueta: "Protegido", previoPct: 4, posteriorPct: 15.8, optima: "liberar", casos: 4, aislaronPct: 25 },
+  { evidencia: "sin-antecedentes", etiqueta: "Sin antecedentes", previoPct: 10, posteriorPct: 33.3, optima: "aislar", casos: 6, aislaronPct: 66.7 },
+  { evidencia: "sintomas", etiqueta: "Síntomas", previoPct: 18, posteriorPct: 49.7, optima: "aislar", casos: 5, aislaronPct: 80 },
+  { evidencia: "contacto", etiqueta: "Contacto estrecho", previoPct: 25, posteriorPct: 60, optima: "aislar", casos: 9, aislaronPct: 88.9 },
+  { evidencia: "conviviente", etiqueta: "Conviviente", previoPct: 40, posteriorPct: 75, optima: "aislar", casos: 8, aislaronPct: 100 },
+];
 
 const STATS_LLENO = {
   prevalencia: 0.1,
   totalPartidas: 128,
   totalJugadores: 31,
   n: 32,
-  estimacionPromedioPct: 100,
-  vppObservadoPct: 100,
-  vppTeoricoPct: 4.3,
-  pctSobreestiman: 100,
-  pctAislados: 40,
-  aisladosSanos: 5,
-  liberadosInfectados: 1,
-  histograma: CUBETAS,
+  vppTeoricoPct: 33.3,
+  vppObservadoPct: 40.6,
+  decisionesOptimasPct: 62.5,
+  puntajePromedio: 6.4,
+  porEvidencia: POR_EVIDENCIA,
 };
 
 const STATS_VACIO = {
@@ -33,11 +32,10 @@ const STATS_VACIO = {
   totalPartidas: 0,
   totalJugadores: 0,
   n: 0,
-  estimacionPromedioPct: null,
   vppObservadoPct: null,
-  pctSobreestiman: null,
-  pctAislados: null,
-  histograma: CUBETAS.map((c) => ({ ...c, cantidad: 0 })),
+  decisionesOptimasPct: null,
+  puntajePromedio: null,
+  porEvidencia: POR_EVIDENCIA.map((e) => ({ ...e, casos: 0, aislaronPct: null })),
 };
 
 const RANKING_LLENO = Array.from({ length: 8 }, (_, i) => ({
@@ -46,6 +44,15 @@ const RANKING_LLENO = Array.from({ length: 8 }, (_, i) => ({
   prevalencia: 0.1,
   creada_en: `2026-10-10T10:0${i}:00Z`,
   tiempoTotalMs: 61_000 + i * 7_300,
+  insignias: i === 0 ? ["perfecto"] : [],
+}));
+
+const ACTIVIDAD_LLENA = Array.from({ length: 8 }, (_, i) => ({
+  id: `00000000-0000-4000-8000-00000000000${i}`,
+  jugador: i === 0 ? "OtroApodoMuyLargoSinEspaciosNada" : `Visitante${i + 1}`,
+  puntaje: 800 - i * 21,
+  creada_en: new Date(Date.now() - (i + 1) * 40_000).toISOString(),
+  primer_intento: i !== 2,
 }));
 
 async function simularApi(page: Page, vacio: boolean) {
@@ -54,6 +61,9 @@ async function simularApi(page: Page, vacio: boolean) {
   );
   await page.route("**/api/ranking*", (r) =>
     r.fulfill({ contentType: "application/json", body: JSON.stringify({ ranking: vacio ? [] : RANKING_LLENO }) }),
+  );
+  await page.route("**/api/actividad*", (r) =>
+    r.fulfill({ contentType: "application/json", body: JSON.stringify({ actividad: vacio ? [] : ACTIVIDAD_LLENA }) }),
   );
 }
 
@@ -74,20 +84,29 @@ const dentro = (hijo: Caja, padre: Caja) =>
   hijo.x + hijo.width <= padre.x + padre.width + 0.5 &&
   hijo.y + hijo.height <= padre.y + padre.height + 0.5;
 
-/** Etiquetas visibles del eje X (sin la del eje oculto de la línea). */
-function ticksX(page: Page): Locator {
-  return page.locator('[data-testid="histograma-grafico"] .recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value');
+/** Etiquetas visibles del eje de evidencias (eje Y del gráfico de barras horizontales). */
+function etiquetasEvidencia(page: Page): Locator {
+  return page.locator('[data-testid="decisiones-grafico"] svg text').filter({ hasText: /casos|sin casos|\(\d+\)/ });
+}
+
+/** Tarjeta de cifra cuyo título contiene `titulo`. */
+function tarjeta(page: Page, titulo: string): Locator {
+  return page.getByTestId("tarjeta-estadistica").filter({ hasText: titulo });
 }
 
 for (const vista of VISTAS) {
   test.describe(`panel ${vista.nombre}`, () => {
     test.use({ viewport: { width: vista.width, height: vista.height } });
 
-    test("con datos: sin desborde, tarjetas sin recortes y ticks sin encimarse", async ({ page }) => {
+    test("con datos: sin desborde, tarjetas sin recortes y etiquetas sin encimarse", async ({ page }) => {
       await simularApi(page, false);
       await page.goto("/panel?key=x");
       await expect(page.getByTestId("tarjeta-estadistica")).toHaveCount(4);
-      await expect(ticksX(page).first()).toBeVisible();
+      await expect(page.getByTestId("decisiones-grafico")).toBeVisible();
+      await expect(etiquetasEvidencia(page).first()).toBeVisible();
+      await expect(page.getByText("EN VIVO", { exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Acaban de jugar" })).toBeVisible();
+      await expect(page.getByText("OtroApodoMuyLargoSinEspaciosNada")).toBeVisible();
 
       const desborde = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(desborde, "desborde horizontal de la página").toBeLessThanOrEqual(0);
@@ -108,30 +127,47 @@ for (const vista of VISTAS) {
         expect(lineas, `número de la tarjeta ${i} en una sola línea`).toBeLessThan(1.5);
       }
 
-      const ticks = ticksX(page);
-      const n = await ticks.count();
-      expect(n).toBeGreaterThan(2);
+      const etiquetas = etiquetasEvidencia(page);
+      const n = await etiquetas.count();
+      expect(n).toBe(POR_EVIDENCIA.length);
       const cajas: Caja[] = [];
-      for (let i = 0; i < n; i++) cajas.push(await caja(ticks.nth(i)));
-      cajas.sort((a, b) => a.x - b.x);
+      for (let i = 0; i < n; i++) cajas.push(await caja(etiquetas.nth(i)));
+      cajas.sort((a, b) => a.y - b.y);
       for (let i = 1; i < cajas.length; i++) {
-        expect(cajas[i - 1].x + cajas[i - 1].width, `ticks ${i - 1} y ${i} encimados`).toBeLessThanOrEqual(cajas[i].x);
+        expect(cajas[i - 1].y + cajas[i - 1].height, `etiquetas ${i - 1} y ${i} encimadas`).toBeLessThanOrEqual(cajas[i].y);
       }
+    });
+
+    test("ocultas por defecto: VPP con \"?\" y el gráfico sin la decisión óptima", async ({ page }) => {
+      await simularApi(page, false);
+      await page.goto("/panel?key=x");
+      await expect(tarjeta(page, "VPP teórico").getByTestId("stat-valor")).toHaveText("?");
+      await expect(tarjeta(page, "VPP observado").getByTestId("stat-valor")).toHaveText("?");
+      await expect(page.getByRole("button", { name: "Revelar respuesta" })).toHaveAttribute("aria-pressed", "false");
+      await expect(page.getByText("Decisión óptima: ?")).toBeVisible();
+      // Sin revelar no aparece ninguna decisión óptima en el gráfico ni en su tabla oculta.
+      await expect(page.getByText("Aislar", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Liberar", { exact: true })).toHaveCount(0);
+    });
+
+    test("?revelar=1: muestra VPP y la decisión óptima", async ({ page }) => {
+      await simularApi(page, false);
+      await page.goto("/panel?key=x&revelar=1");
+      await expect(tarjeta(page, "VPP teórico").getByTestId("stat-valor")).toHaveText("33,3 %");
+      await expect(tarjeta(page, "VPP observado").getByTestId("stat-valor")).toHaveText("40,6 %");
+      await expect(page.getByRole("button", { name: "Ocultar respuesta" })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("list", { name: "Leyenda" }).getByText("Decisión óptima", { exact: true })).toBeVisible();
+      await expect(page.getByText("Aislar", { exact: true }).first()).toBeVisible();
     });
 
     test("sin respuestas: el mensaje no choca con los ejes y no hay desborde", async ({ page }) => {
       await simularApi(page, true);
       await page.goto("/panel?key=x");
-      const mensaje = page.getByTestId("histograma-vacio");
+      const mensaje = page.getByTestId("decisiones-vacio");
       await expect(mensaje).toBeVisible();
 
       const cm = await caja(mensaje);
-      const ticks = ticksX(page);
-      const n = await ticks.count();
-      for (let i = 0; i < n; i++) {
-        expect(seCruzan(cm, await caja(ticks.nth(i))), `mensaje contra tick ${i}`).toBe(false);
-      }
-      const graficos = page.locator('[data-testid="histograma-grafico"] svg.recharts-surface');
+      const graficos = page.locator('[data-testid="decisiones-grafico"] svg.recharts-surface');
       for (let i = 0; i < (await graficos.count()); i++) {
         expect(seCruzan(cm, await caja(graficos.nth(i))), "mensaje encima del gráfico").toBe(false);
       }

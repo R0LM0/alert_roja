@@ -7,25 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { FaseCiudad } from "@/lib/ciudad-layout";
 import { festejar } from "@/lib/confeti";
+import { explicacionFrecuencias } from "@/lib/explicacion";
+import { calcularVeredicto } from "@/lib/veredicto";
 import { formatearPct, pasosBayes } from "@/lib/formula-bayes";
+import { medallasInsignias, resolverInsignias } from "@/lib/insignias";
 import { prevalenciaDeModo, type Modo } from "@/lib/ronda";
 import { calcularResultado } from "@/lib/resultado";
-import { leerResultado, limpiar, type ResultadoJuego } from "@/lib/sesion-juego";
+import { guardarInsignias, leerInsignias, leerResultado, limpiar, type InsigniaGuardada, type ResultadoJuego } from "@/lib/sesion-juego";
 import { useSonido } from "@/lib/sound";
 import { AccionesResultado } from "./AccionesResultado";
 import { Aparece } from "./Aparece";
 import { CiudadSlot } from "./CiudadSlot";
 import { ComparacionIntuicion } from "./ComparacionIntuicion";
 import { FormulaBayes } from "./FormulaBayes";
-import { Insignias } from "./Insignias";
+import { HistorialInsignias, Insignias } from "./Insignias";
 import { MensajeClave } from "./MensajeClave";
+import { PorQuePasoEsto } from "./PorQuePasoEsto";
 import { PuntajeResumen } from "./PuntajeResumen";
+import { RevisionPacientes } from "./RevisionPacientes";
+import { SabiasQue } from "./SabiasQue";
+import { VeredictoCiudad } from "./VeredictoCiudad";
 
 /** Pausas de la secuencia: ver la ciudad mezclada, reagrupar y, al final, celebrar. */
 const RETARDO_TABLA_MS = 2200;
 const RETARDO_CIERRE_MS = 4600;
 
-const pctEntero = (pct: number) => formatearPct(pct, 0);
 const pctLegible = (pct: number) => formatearPct(pct, pct < 10 ? 1 : 0);
 
 function SinResultado() {
@@ -56,10 +62,20 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
     [modo, resultado],
   );
   const pasos = useMemo(() => pasosBayes(prevalenciaDeModo(modo)), [modo]);
+  const porQue = useMemo(() => explicacionFrecuencias(modo), [modo]);
+  const [historial, setHistorial] = useState<InsigniaGuardada[]>([]);
+  const insigniasHistorial = useMemo(() => resolverInsignias(historial.map((i) => i.id)), [historial]);
+  useEffect(() => {
+    // Solo un resultado completo (validado al leerlo de la sesión) puede otorgar insignias.
+    if (resultado.ronda.length !== 10 || resultado.respuestas.length !== 10) return;
+    guardarInsignias(resultado.jugador, calculo.insignias);
+    setHistorial(leerInsignias(resultado.jugador));
+  }, [resultado, calculo.insignias]);
 
   const esPuntajeAlto = calculo.esPuntajeAlto;
-  const decisionesAcertadas = calculo.filas.filter((f) => f.decisionAcertada).length;
-  const mayoriaAcertada = decisionesAcertadas * 2 >= calculo.filas.length;
+  // El festejo mira el destino de la ciudad, no solo el puntaje: con un infectado
+  // liberado la ciudad se contagia y celebrar contradiría el final.
+  const ciudadSalvada = calcularVeredicto(calculo.filas).estado === "salvada";
 
   // Secuencia de la revelación: ciudad -> tabla -> cierre (sonido + confeti).
   // Aquí la verdad ya es conocida por el jugador, por eso suenan acierto/error.
@@ -77,14 +93,14 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
     const alCerrar = setTimeout(() => {
       if (cerrada.current) return;
       cerrada.current = true;
-      playRef.current(mayoriaAcertada ? "acierto" : "error");
-      if (esPuntajeAlto) festejar(); // no hace nada con movimiento reducido
+      playRef.current("resultado");
+      if (esPuntajeAlto && ciudadSalvada) festejar(); // no hace nada con movimiento reducido
     }, reducido ? 400 : RETARDO_CIERRE_MS);
     return () => {
       clearTimeout(aTabla);
       clearTimeout(alCerrar);
     };
-  }, [esPuntajeAlto, mayoriaAcertada]);
+  }, [esPuntajeAlto, ciudadSalvada]);
 
   function jugar(destino: Modo) {
     limpiar();
@@ -98,34 +114,52 @@ function Pantalla({ resultado }: { resultado: ResultadoJuego }) {
         <p className="text-muted">{modo === "experto" ? "Modo experto · prevalencia 1 %" : "Modo normal · prevalencia 10 %"}</p>
       </header>
       <Aparece orden={0}>
-        <CiudadSlot frecuencias={calculo.frecuencias} mensajeFrecuencias={pasos.texto.frecuencias} fase={fase} />
+        <VeredictoCiudad filas={calculo.filas} />
       </Aparece>
       <Aparece orden={1}>
-        <ComparacionIntuicion
-          intuicionPct={calculo.estimacionPromedioPct}
-          realidadPct={calculo.vppTeoricoPct}
-          intuicionTexto={pctLegible(calculo.estimacionPromedioPct)}
-          realidadTexto={pctLegible(calculo.vppTeoricoPct)}
-        />
+        <CiudadSlot frecuencias={calculo.frecuencias} mensajeFrecuencias={pasos.texto.frecuencias} fase={fase} />
       </Aparece>
-      <Aparece orden={2}>
+      {calculo.estimacionPromedioPct !== null ? (
+        <Aparece orden={2}>
+          <ComparacionIntuicion
+            intuicionPct={calculo.estimacionPromedioPct}
+            realidadPct={calculo.vppTeoricoPct}
+            intuicionTexto={pctLegible(calculo.estimacionPromedioPct)}
+            realidadTexto={pctLegible(calculo.vppTeoricoPct)}
+          />
+        </Aparece>
+      ) : null}
+      <Aparece orden={3}>
         <PuntajeResumen
           total={calculo.puntajeTotal}
           infectadosEnRonda={calculo.infectadosEnRonda}
           filas={calculo.filas}
-          estimacionTexto={pctEntero}
         />
       </Aparece>
-      <Aparece orden={3}>
-        <Insignias insignias={calculo.insignias} />
+      <Aparece orden={4}>
+        <RevisionPacientes filas={calculo.filas} />
       </Aparece>
       <Aparece orden={4}>
+        <Insignias medallas={medallasInsignias(calculo.insignias.map((i) => i.id))} />
+      </Aparece>
+      {insigniasHistorial.length > 0 ? (
+        <Aparece orden={4}>
+          <HistorialInsignias insignias={insigniasHistorial} />
+        </Aparece>
+      ) : null}
+      <Aparece orden={5}>
         <MensajeClave mensaje={calculo.mensajeClave} />
       </Aparece>
-      <Aparece orden={5}>
+      <Aparece orden={6}>
+        <PorQuePasoEsto explicacion={porQue} infectadosEnRonda={calculo.infectadosEnRonda} total={calculo.filas.length} />
+      </Aparece>
+      <Aparece orden={7}>
         <FormulaBayes pasos={pasos} />
       </Aparece>
-      <Aparece orden={6}>
+      <Aparece orden={8}>
+        <SabiasQue />
+      </Aparece>
+      <Aparece orden={9}>
         <AccionesResultado
           modo={modo}
           guardado={resultado.estado === "guardado"}

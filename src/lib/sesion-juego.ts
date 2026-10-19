@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { localSeguro, type AlmacenTexto } from "./cola-offline";
+import { IDS_INSIGNIAS, type InsigniaInfo } from "./insignias";
 import { tieneGroseria } from "./profanity";
+import { normalizarApodo } from "./ranking";
 import { respuestaSchema } from "./schema";
 
 // Traspaso de datos entre /jugar y /resultado (sessionStorage) y apodo recordado (localStorage).
@@ -9,12 +11,107 @@ import { respuestaSchema } from "./schema";
 const CLAVE_RESULTADO = "alerta-roja:resultado";
 const CLAVE_APODO_SESION = "alerta-roja:apodo-sesion";
 const CLAVE_APODO_RECUERDO = "alerta-roja:apodo";
+const CLAVE_INSIGNIAS = "alerta-roja:insignias";
+const MAX_APODOS_INSIGNIAS = 20;
+/** Cada medalla del catálogo puede guardarse una vez por apodo. */
+const MAX_INSIGNIAS = IDS_INSIGNIAS.length;
+
+// Persistimos solo el id y la primera fecha; los textos e iconos se resuelven al pintar.
+const insigniaGuardadaSchema = z.object({
+  id: z.enum(IDS_INSIGNIAS),
+  fecha: z.string().datetime(),
+});
+const historialSchema = z.array(z.object({
+  jugador: z.string().min(1).max(20),
+  // Un id retirado no invalida las demás insignias del apodo.
+  insignias: z.array(z.unknown()).max(MAX_INSIGNIAS).transform((items) => items.flatMap((item) => {
+    const validada = insigniaGuardadaSchema.safeParse(item);
+    return validada.success ? [validada.data] : [];
+  })),
+})).max(MAX_APODOS_INSIGNIAS);
+
+export type InsigniaGuardada = z.infer<typeof insigniaGuardadaSchema>;
+type Historial = z.infer<typeof historialSchema>;
+
+function leerHistorial(almacen: AlmacenTexto | null): Historial {
+  try {
+    const crudo = almacen?.getItem(CLAVE_INSIGNIAS);
+    if (!crudo) return [];
+    const parsed = historialSchema.safeParse(JSON.parse(crudo));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Acumula insignias de un turno terminado en este dispositivo, sin cambiar la primera fecha. */
+export function guardarInsignias(
+  jugador: string, insignias: readonly InsigniaInfo[], almacen: AlmacenTexto | null = localSeguro(),
+): void {
+  try {
+    const apodo = normalizarApodo(jugador);
+    if (!apodo || apodo.length > 20 || !insignias.length || !almacen) return;
+    const historial = leerHistorial(almacen);
+    let entrada = historial.find((h) => h.jugador === apodo);
+    const fecha = new Date().toISOString();
+    let cambiado = false;
+    for (const insignia of insignias) {
+      if (entrada?.insignias.some((i) => i.id === insignia.id)) continue;
+      const guardada = insigniaGuardadaSchema.safeParse({ id: insignia.id, fecha });
+      if (!guardada.success) continue; // ids desconocidos o datos inválidos no entran al historial
+      if (!entrada) {
+        entrada = { jugador: apodo, insignias: [] };
+        historial.push(entrada);
+      }
+      if (entrada.insignias.length >= MAX_INSIGNIAS) break;
+      entrada.insignias.push(guardada.data);
+      cambiado = true;
+    }
+    if (!cambiado) return;
+    // El orden del arreglo es el primer uso del apodo: repetir una ronda no rejuvenece la entrada.
+    almacen.setItem(CLAVE_INSIGNIAS, JSON.stringify(historial.slice(-MAX_APODOS_INSIGNIAS)));
+  } catch {
+    // Modo privado o cuota llena: no interrumpir el resultado de la partida.
+  }
+}
+
+/** Historial local del apodo; un valor corrupto o almacenamiento bloqueado equivale a ninguno. */
+export function leerInsignias(jugador: string, almacen: AlmacenTexto | null = localSeguro()): InsigniaGuardada[] {
+  try {
+    const apodo = normalizarApodo(jugador);
+    if (!apodo) return [];
+    return leerHistorial(almacen).find((h) => h.jugador === apodo)?.insignias ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Apodos de este dispositivo que tienen al menos una insignia, en el orden del historial (normalizados). */
+export function apodosConInsignias(almacen: AlmacenTexto | null = localSeguro()): string[] {
+  try {
+    return leerHistorial(almacen).filter((h) => h.insignias.length > 0).map((h) => h.jugador);
+  } catch {
+    return [];
+  }
+}
+
+/** Borra únicamente el historial local de insignias. */
+export function limpiarInsignias(almacen: AlmacenTexto | null = localSeguro()): void {
+  try {
+    almacen?.removeItem(CLAVE_INSIGNIAS);
+  } catch {
+    // nada que hacer
+  }
+}
 
 const resultadoSchema = z.object({
   jugador: z.string().min(1).max(20),
   modo: z.enum(["normal", "experto"]),
   ronda: z
-    .array(z.object({ orden: z.number().int(), nombre: z.string(), seed: z.string(), estaba_infectado: z.boolean() }))
+    .array(z.object({
+      orden: z.number().int(), nombre: z.string(), seed: z.string(), estaba_infectado: z.boolean(),
+      evidencia: z.enum(["conviviente", "contacto", "sintomas", "sin-antecedentes", "protegido"]),
+    }))
     .length(10),
   respuestas: z.array(respuestaSchema).length(10),
   puntaje: z.number().int().optional(),

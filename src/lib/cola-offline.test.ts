@@ -11,12 +11,15 @@ function almacenFalso(inicial: Record<string, string> = {}): AlmacenTexto {
   };
 }
 
+const DUENO = "5b1c9e2a-7d3f-4e8a-9c60-2f4b8d1e7a35";
+
 function partida(jugador = "Ana") {
   const ronda = crearRonda(`s-${jugador}`, 0.1, () => 0.9);
   return armarPartida(
     jugador,
     0.1,
     ronda.map((p) => ({ paciente: p, estimacion_pct: 33, decision: "liberar" as const, tiempo_ms: 500 })),
+    DUENO,
   );
 }
 
@@ -43,6 +46,21 @@ describe("idempotencia", () => {
     });
     expect(JSON.parse(cuerpos[0]).id).toBe(id);
     expect(cola.pendientes()).toEqual([]);
+  });
+
+  it("conserva estimaciones nulas al reintentar sin cambiar el payload", async () => {
+    const sinEstimacion = { ...conId(), respuestas: conId().respuestas.map((r) => ({ ...r, estimacion_pct: null })) };
+    const cola = crearCola(almacenFalso());
+    cola.encolar(sinEstimacion);
+    const cuerpos: string[] = [];
+    await cola.reintentar(async (p) => {
+      await enviarSinCola(p, (_url, init) => {
+        cuerpos.push(String(init.body));
+        return respuesta(200, { id, puntaje: 5 });
+      });
+      return true;
+    });
+    expect(JSON.parse(cuerpos[0])).toEqual(sinEstimacion);
   });
 
   it("un 200 (partida ya existente) cuenta como guardado", async () => {

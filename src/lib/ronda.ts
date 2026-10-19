@@ -1,6 +1,7 @@
+import { casoDePaciente, type Evidencia, type ModalidadCaso } from "./caso-bayesiano";
 import { pacientesDeRonda } from "./pacientes";
 import type { PartidaInput } from "./schema";
-import { PACIENTES_POR_RONDA, PREVALENCIA, PREVALENCIA_EXPERTO, sortearPositivo } from "./stats";
+import { PACIENTES_POR_RONDA, PREVALENCIA, PREVALENCIA_EXPERTO } from "./stats";
 
 export type Modo = "normal" | "experto";
 export type Prevalencia = PartidaInput["prevalencia"];
@@ -14,17 +15,23 @@ export type PacienteRonda = {
   orden: number;
   nombre: string;
   seed: string;
+  evidencia: Evidencia;
   estaba_infectado: boolean;
 };
 
-/** Una ronda de 10 pacientes positivos; cada uno está infectado con probabilidad = VPP. */
-export function crearRonda(seed: string, prevalencia: Prevalencia, rand: () => number = Math.random): PacienteRonda[] {
-  return pacientesDeRonda(seed, PACIENTES_POR_RONDA).map((p, i) => ({
-    orden: i + 1,
-    nombre: p.nombre,
-    seed: p.seed,
-    estaba_infectado: sortearPositivo(rand, prevalencia).infectado,
-  }));
+/** Una ronda de 10 pacientes positivos; cada caso se deriva de su semilla. */
+export function crearRonda(seed: string, prevalencia: Prevalencia, _rand: () => number = Math.random): PacienteRonda[] {
+  const modalidad: ModalidadCaso = prevalencia === PREVALENCIA_EXPERTO ? "experto" : "normal";
+  return pacientesDeRonda(seed, PACIENTES_POR_RONDA).map((p, i) => {
+    const caso = casoDePaciente(p.seed, modalidad);
+    return {
+      orden: i + 1,
+      nombre: p.nombre,
+      seed: p.seed,
+      evidencia: caso.evidencia,
+      estaba_infectado: caso.infectado,
+    };
+  });
 }
 
 /** uuid v4 para la clave de idempotencia; funciona también en http (sin `randomUUID`). */
@@ -43,7 +50,7 @@ export function nuevoIdPartida(): string {
 /** Lo que registra la interfaz por paciente. */
 export type RespuestaUI = {
   paciente: PacienteRonda;
-  estimacion_pct: number;
+  estimacion_pct: number | null;
   decision: Decision;
   tiempo_ms: number;
 };
@@ -60,16 +67,19 @@ export function armarPartida(
   jugador: string,
   prevalencia: Prevalencia,
   respuestas: RespuestaUI[],
+  dueno: string,
   id?: string,
 ): PartidaInput {
   return {
     ...(id ? { id } : {}),
     jugador: jugador.trim(),
+    dueno,
     prevalencia,
     respuestas: respuestas.map((r) => ({
       orden: r.paciente.orden,
-      estimacion_pct: acotar(r.estimacion_pct, 0, 100),
+      estimacion_pct: r.estimacion_pct === null ? null : acotar(r.estimacion_pct, 0, 100),
       decision: r.decision,
+      evidencia: r.paciente.evidencia,
       estaba_infectado: r.paciente.estaba_infectado,
       tiempo_ms: acotar(r.tiempo_ms, 0, TIEMPO_MAX_MS),
     })),

@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: URL_BASE,
     trace: "retain-on-failure",
+    // Opcional: Chromium ya instalado cuando no coincide con la versión de Playwright.
+    launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   projects: [
     {

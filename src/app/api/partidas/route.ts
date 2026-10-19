@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { reclamarApodo } from "@/lib/apodos-db";
 import { errorJson, logError } from "@/lib/api";
+import { puntajeDeRespuestas, type ModalidadCaso } from "@/lib/caso-bayesiano";
 import { sql } from "@/lib/db";
 import { clientIp, crearLimitador } from "@/lib/rate-limit";
 import { partidaSchema } from "@/lib/schema";
-import { puntajePartida } from "@/lib/stats";
+import { PREVALENCIA_EXPERTO } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 
@@ -46,16 +48,17 @@ function guardar(
       returning id, puntaje
     ),
     r as (
-      insert into respuestas (partida_id, orden, estimacion_pct, decision, estaba_infectado, tiempo_ms)
-      select p.id, t.orden, t.est, t.dec, t.inf, t.ms
+      insert into respuestas (partida_id, orden, estimacion_pct, decision, evidencia, estaba_infectado, tiempo_ms)
+      select p.id, t.orden, t.est, t.dec, t.ev, t.inf, t.ms
       from p,
         unnest(
           ${ordenadas.map((r) => r.orden)}::smallint[],
-          ${ordenadas.map((r) => r.estimacion_pct)}::smallint[],
+          ${ordenadas.map((r) => r.estimacion_pct ?? null)}::smallint[],
           ${ordenadas.map((r) => r.decision)}::text[],
+          ${ordenadas.map((r) => r.evidencia)}::text[],
           ${ordenadas.map((r) => r.estaba_infectado)}::boolean[],
           ${ordenadas.map((r) => r.tiempo_ms)}::int[]
-        ) as t(orden, est, dec, inf, ms)
+        ) as t(orden, est, dec, ev, inf, ms)
       returning 1
     )
     select p.id::text as id, p.puntaje, true as nueva from p
@@ -98,16 +101,19 @@ export async function POST(req: Request) {
     return errorJson(400, "Datos inválidos", { detalle: parsed.error.flatten().fieldErrors });
   }
 
-  const { jugador, prevalencia, respuestas } = parsed.data;
+  const { jugador, dueno, prevalencia, respuestas } = parsed.data;
   // Clave de idempotencia: la del cliente (reintentos) o una nueva.
   const id = parsed.data.id ?? crypto.randomUUID();
   const ordenadas = [...respuestas].sort((a, b) => a.orden - b.orden);
-  // El puntaje del cliente se ignora: se recalcula aquí.
-  const puntaje = puntajePartida(ordenadas, prevalencia);
+  // El puntaje del cliente se ignora: se recalcula aquí con la evidencia de cada paciente.
+  const modalidad: ModalidadCaso = prevalencia === PREVALENCIA_EXPERTO ? "experto" : "normal";
+  const puntaje = puntajeDeRespuestas(ordenadas, modalidad);
 
   const tiempoTotalMs = ordenadas.reduce((a, r) => a + r.tiempo_ms, 0);
 
   try {
+    // Apodo de otro dispositivo: no se guarda. Si está libre, queda reservado aquí (idempotente).
+    if (!(await reclamarApodo(jugador, dueno))) return errorJson(409, "Ese apodo ya está en uso");
     let filas: Awaited<ReturnType<typeof guardar>>;
     try {
       filas = await guardar(id, jugador, prevalencia, puntaje, tiempoTotalMs, ordenadas, false);

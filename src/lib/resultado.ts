@@ -1,54 +1,31 @@
+import { EVIDENCIAS, posteriorBayes, puntosPorDecision, type Evidencia } from "./caso-bayesiano";
 import { formatearPct } from "./formula-bayes";
+import { resolverInsignias, type InsigniaInfo } from "./insignias";
 import { prevalenciaDeModo, type Modo } from "./ronda";
 import {
-  BONO_DECISION,
   PACIENTES_POR_RONDA,
   SENSIBILIDAD,
   decisionAcertada,
   frecuenciasNaturales,
   insignias,
-  puntajePartida,
-  puntajeRespuesta,
   vppBayes,
   type Frecuencias,
-  type Insignia,
   type Respuesta,
 } from "./stats";
 
-/** Fracción del puntaje máximo posible desde la que se festeja. */
-export const UMBRAL_PUNTAJE_ALTO = 0.75;
+/** Fracción del puntaje máximo posible desde la que se festeja (8 decisiones óptimas de 10). */
+export const UMBRAL_PUNTAJE_ALTO = 0.8;
 
-/** Máximo posible: estimación perfecta (100) + bono de decisión en cada paciente. */
+/** Máximo posible: una decisión de mayor valor esperado por paciente. */
 export function puntajeMaximo(): number {
-  return PACIENTES_POR_RONDA * (100 + BONO_DECISION);
+  return PACIENTES_POR_RONDA;
 }
 
-export type InsigniaInfo = { id: Insignia; titulo: string; descripcion: string; icono: "brain" | "shield-alert" | "smile" };
-
-const INSIGNIAS: Record<Insignia, InsigniaInfo> = {
-  "bayesiano-nato": {
-    id: "bayesiano-nato",
-    titulo: "Bayesiano nato",
-    descripcion: "Tu estimación promedio quedó entre 25 % y 40 %, cerca de la realidad.",
-    icono: "brain",
-  },
-  paranoico: {
-    id: "paranoico",
-    titulo: "Paranoico",
-    descripcion: "Aislaste a los 10 pacientes, sin excepción.",
-    icono: "shield-alert",
-  },
-  confiado: {
-    id: "confiado",
-    titulo: "Confiado",
-    descripcion: "Liberaste a los 10 pacientes, sin excepción.",
-    icono: "smile",
-  },
-};
+export type { InsigniaInfo } from "./insignias";
 
 export type EntradaResultado = {
   modo: Modo;
-  ronda: { orden: number; nombre: string }[];
+  ronda: { orden: number; nombre: string; evidencia?: Evidencia }[];
   respuestas: (Respuesta & { orden: number })[];
   /** Puntaje calculado por el servidor, si ya se guardó. */
   puntajeServidor?: number;
@@ -57,19 +34,20 @@ export type EntradaResultado = {
 export type FilaPaciente = {
   orden: number;
   nombre: string;
-  estimacionPct: number;
+  estimacionPct: number | null;
   decision: Respuesta["decision"];
   estaba_infectado: boolean;
-  puntajeEstimacion: number;
-  bonoDecision: number;
-  puntaje: number;
+  evidencia: Evidencia;
+  previo: number;
+  posterior: number;
+  puntos: 0 | 1;
   decisionAcertada: boolean;
 };
 
 export type ResultadoCalculado = {
   prevalencia: number;
   vppTeoricoPct: number;
-  estimacionPromedioPct: number;
+  estimacionPromedioPct: number | null;
   filas: FilaPaciente[];
   puntajeTotal: number;
   infectadosEnRonda: number;
@@ -80,43 +58,46 @@ export type ResultadoCalculado = {
 };
 
 /** Todo lo que muestra /resultado; los componentes solo pintan estos valores. */
-export function calcularResultado({ modo, ronda, respuestas, puntajeServidor }: EntradaResultado): ResultadoCalculado {
+export function calcularResultado({ modo, ronda, respuestas }: EntradaResultado): ResultadoCalculado {
   const prevalencia = prevalenciaDeModo(modo);
   const vpp = vppBayes(prevalencia);
   const vppPct = vpp * 100;
-  const nombres = new Map(ronda.map((p) => [p.orden, p.nombre]));
+  const pacientes = new Map(ronda.map((p) => [p.orden, p]));
 
   const filas = respuestas.map<FilaPaciente>((r) => {
-    const acierto = decisionAcertada(r);
-    const puntajeEstimacion = puntajeRespuesta(r.estimacion_pct, vppPct);
-    const bonoDecision = acierto ? BONO_DECISION : 0;
+    const paciente = pacientes.get(r.orden);
+    const evidencia = paciente?.evidencia ?? "sin-antecedentes";
+    const previo = EVIDENCIAS[evidencia].previo[modo];
+    const posterior = posteriorBayes(previo);
     return {
       orden: r.orden,
-      nombre: nombres.get(r.orden) ?? `Paciente ${r.orden}`,
+      nombre: paciente?.nombre ?? `Paciente ${r.orden}`,
       estimacionPct: r.estimacion_pct,
       decision: r.decision,
       estaba_infectado: r.estaba_infectado,
-      puntajeEstimacion,
-      bonoDecision,
-      puntaje: puntajeEstimacion + bonoDecision,
-      decisionAcertada: acierto,
+      evidencia,
+      previo,
+      posterior,
+      puntos: puntosPorDecision(r.decision, posterior),
+      decisionAcertada: decisionAcertada(r),
     };
   });
 
-  // Si el servidor ya calculó el puntaje, se muestra ese (fuente de verdad); debe coincidir con puntajePartida.
-  const puntajeTotal = puntajeServidor ?? puntajePartida(respuestas, prevalencia);
-  const n = respuestas.length;
+  const estimaciones = respuestas.flatMap((r) => r.estimacion_pct === null ? [] : [r.estimacion_pct]);
+  // El puntaje del servidor puede provenir de una versión previa sin evidencia;
+  // /resultado siempre calcula la misma regla bayesiana que muestra por fila.
+  const puntajeTotal = filas.reduce((total, fila) => total + fila.puntos, 0);
   const porCada = Math.round(1 / vpp);
 
   return {
     prevalencia,
     vppTeoricoPct: vppPct,
-    estimacionPromedioPct: n === 0 ? 0 : respuestas.reduce((a, r) => a + r.estimacion_pct, 0) / n,
+    estimacionPromedioPct: estimaciones.length ? estimaciones.reduce((a, pct) => a + pct, 0) / estimaciones.length : null,
     filas,
     puntajeTotal,
     infectadosEnRonda: respuestas.filter((r) => r.estaba_infectado).length,
     frecuencias: frecuenciasNaturales(undefined, prevalencia),
-    insignias: insignias(respuestas, prevalencia).map((id) => INSIGNIAS[id]),
+    insignias: resolverInsignias(insignias(respuestas, { modo, ronda })),
     esPuntajeAlto: puntajeTotal >= puntajeMaximo() * UMBRAL_PUNTAJE_ALTO,
     mensajeClave: `La prueba acierta ${formatearPct(SENSIBILIDAD * 100, 0)}, pero solo 1 de cada ${porCada} positivos está enfermo`,
   };

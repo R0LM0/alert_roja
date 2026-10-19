@@ -1,7 +1,9 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { errorJson, logError } from "@/lib/api";
 import { aCsv } from "@/lib/csv";
-import { cargarDatosExport, leerRespuestas } from "@/lib/export-datos";
+import { cierreFeria } from "@/lib/cierre";
+import { claveValida } from "@/lib/clave";
+import { enAlcanceFeria, cargarDatosExport, leerRespuestas } from "@/lib/export-datos";
+import { decisionOptima, modoDePrevalencia } from "@/lib/export-decisiones";
 import { generarXlsxConGraficos } from "@/lib/export-xlsx";
 
 export const dynamic = "force-dynamic";
@@ -14,20 +16,17 @@ const CABECERA_CSV = [
   "puntaje",
   "tiempo_total_ms",
   "primer_intento",
+  "en_informe",
   "orden",
+  "evidencia",
   "estimacion_pct",
   "decision",
+  "decision_optima",
   "estaba_infectado",
   "tiempo_ms",
 ];
 
 const TIPO_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-/** Comparación en tiempo constante (se comparan hashes de igual longitud). */
-function claveValida(recibida: string | null, esperada: string): boolean {
-  const h = (s: string) => createHash("sha256").update(s).digest();
-  return timingSafeEqual(h(recibida ?? ""), h(esperada));
-}
 
 /** Fecha de hoy en Managua (UTC−6) como YYYY-MM-DD, para el nombre del archivo. */
 function fechaArchivo(d: Date): string {
@@ -45,23 +44,31 @@ export async function GET(req: Request) {
 
   try {
     if (esCsv) {
+      const cierre = cierreFeria();
       const filas = await leerRespuestas();
       const csv = aCsv(
         CABECERA_CSV,
-        filas.map((f) => [
-          f.partidaId,
-          f.creadaEn.toISOString(),
-          f.jugador,
-          f.prevalencia,
-          f.puntaje,
-          f.tiempoTotalMs,
-          f.primerIntento,
-          f.orden,
-          f.estimacionPct,
-          f.decision,
-          f.estabaInfectado,
-          f.tiempoMs,
-        ]),
+        filas.map((f) => {
+          const enInforme = f.primerIntento && enAlcanceFeria(f.creadaEn, cierre === null ? null : new Date(cierre));
+          const optima = f.evidencia === null ? null : decisionOptima(f.evidencia, modoDePrevalencia(f.prevalencia));
+          return [
+            f.partidaId,
+            f.creadaEn.toISOString(),
+            f.jugador,
+            f.prevalencia,
+            f.puntaje,
+            f.tiempoTotalMs,
+            f.primerIntento,
+            enInforme,
+            f.orden,
+            f.evidencia,
+            f.estimacionPct,
+            f.decision,
+            optima,
+            f.estabaInfectado,
+            f.tiempoMs,
+          ];
+        }),
       );
       return new Response(csv, {
         headers: {

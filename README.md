@@ -28,7 +28,7 @@ src/
   app/            Rutas: / (inicio), /jugar, /resultado, /panel y /api/* (partidas, stats, ranking, export)
   components/     UI sin cálculos: game/, resultado/, panel/, three/, ui/
   lib/            Lógica pura y testeada: stats, ronda, resultado, formula-bayes, panel, ranking, export-xlsx, csv, cola-offline, rate-limit, db
-db/migrations/    001_init.sql (partidas + respuestas), 002_primer_intento.sql (regla del ranking)
+db/migrations/    001_init.sql (partidas + respuestas), 002_primer_intento.sql (regla del ranking), 005_apodos.sql (apodos únicos)
 scripts/          migrate.mjs (npm run db:migrate)
 e2e/              Test de Playwright: una ronda completa en celular
 ```
@@ -43,7 +43,8 @@ Toda la estadística vive en `src/lib` (por ejemplo `stats.ts`); los componentes
 | --- | --- | --- |
 | `DATABASE_URL` | Sí | Conexión a Postgres. Si contiene `neon.tech` se usa el driver de Neon; si no, `pg`. |
 | `NEXT_PUBLIC_SITE_URL` | Recomendada | URL pública del juego; es la que codifica el QR del panel. Si falta, se usa la URL desde la que se abrió el panel. |
-| `PANEL_KEY` | Opcional | Si se define, `/api/export` (Excel y CSV) exige `?key=<PANEL_KEY>`. |
+| `PANEL_KEY` | Opcional | Si se define, `/api/export` (Excel y CSV) exige `?key=<PANEL_KEY>`. `/podio` exige la clave siempre: sin `PANEL_KEY` no se muestra. |
+| `CIERRE_FERIA` | Opcional | Hora de cierre con zona, ej. `2026-10-20T18:00:00-06:00`. Las partidas creadas después no cuentan en el ranking ni en el podio. Si es inválida se ignora (aviso en consola). |
 
 ## Correr en local
 
@@ -61,7 +62,7 @@ DATABASE_URL=postgresql://alerta:alerta@localhost:5432/alerta
 
 ```bash
 npm install
-npm run db:migrate                # crea las tablas y aplica 001 y 002
+npm run db:migrate                # crea las tablas y aplica 001, 002 y 005
 npm run dev                       # http://localhost:3000
 ```
 
@@ -102,9 +103,19 @@ El límite de peticiones por IP vive en memoria: en Vercel es **por instancia se
 - El QR apunta a `NEXT_PUBLIC_SITE_URL`. En la feria usa la URL pública, o la IP de tu red local (`http://192.168.x.x:3000`) si todos están en el mismo Wi-Fi.
 - Por HTTP en LAN el juego funciona (hay respaldo para generar el id de partida sin `crypto.randomUUID`), pero el audio y el WebGL se comportan mejor con HTTPS.
 - Proyecta `/panel` a 1920x1080. El filtro Normal / Experto cambia las estadísticas y el histograma.
+- **Apodos únicos**: cada apodo queda reservado para el dispositivo que lo usó primero (token `dueno` en `localStorage`, clave `alerta-roja:dueno`; nunca se muestra). Otro dispositivo recibe un 409 con apodos libres sugeridos. Si se borran los datos del navegador, se pierde la reserva. Migración `005_apodos.sql` (tabla `apodos`); la base de la feria se reinicia, así que no hay relleno de partidas previas.
 - **Ranking**: solo cuenta el **primer intento por apodo** (sin distinguir mayúsculas ni espacios) en cada dificultad; el desempate es el **menor tiempo total** y luego la partida más antigua. Los intentos siguientes se guardan, pero no entran al ranking ni a las estadísticas del público (histograma, promedio, VPP observado, % que sobreestimó). El contador en vivo sí cuenta todas las partidas.
-- **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). La hoja Histograma incluye un gráfico de columnas nativo (editable en Excel) por dificultad, con el tramo del VPP teórico resaltado. El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
+- **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` de informe para el docente: hojas Portada (indicadores e índice), Explicación (Bayes con los números de cada modalidad, frecuencias naturales y decisión óptima por evidencia), Decisiones (lo que hizo el público frente a lo óptimo, con gráfico), Ranking, Podio y Respuestas (tabla filtrable, una fila por paciente). La hoja Histograma solo aparece si hay estimaciones de partidas antiguas. Las cifras cuentan solo el primer intento de cada apodo, desde el inicio de la temporada y hasta `CIERRE_FERIA`. El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja las respuestas en UTF-8 con BOM, con las columnas evidencia y decisión óptima. Las horas van en hora de Managua (UTC−6).
 - Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".
+
+## Día de la feria
+
+1. `npm run db:migrate` (aplica migraciones pendientes).
+2. `npm run db:reset-feria -- --confirmar` vacía partidas, respuestas y apodos, y reinicia los ids. Sin `--confirmar` solo muestra a qué base se conecta y los conteos.
+3. Define `CIERRE_FERIA` con la hora de cierre (ej. `2026-10-20T18:00:00-06:00`) y reinicia el servidor.
+4. Abre `/podio?key=TU_CLAVE` para ver el top 3 de Normal y Experto. El botón **Revelar** muestra 3.º, 2.º y 1.º.
+
+El podio avisa de **empates** (mismo puntaje y tiempo) y de **mismo dispositivo** en más de un puesto. No excluye a nadie: el organizador decide.
 
 ## Tests
 
@@ -126,4 +137,4 @@ El test E2E construye y levanta la app de producción en el puerto 3116 e interc
 
 ## Créditos y licencias
 
-Tipografías, iconos, avatares y sonidos usan licencias libres, documentadas una por una en [CREDITS.md](CREDITS.md). Los assets se sirven desde `public/`, sin CDN en tiempo de ejecución.
+Tipografías, iconos y avatares usan licencias libres, documentadas una por una en [CREDITS.md](CREDITS.md). Los assets se sirven desde el propio sitio, sin CDN en tiempo de ejecución; el sonido se sintetiza en el navegador.

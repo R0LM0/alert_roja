@@ -32,7 +32,33 @@
   --shadow-soft: 0 6px 20px -6px rgb(0 0 0 / 0.55);
   --shadow-glow: 0 0 0 1px rgb(220 38 38 / 0.35), 0 8px 28px -8px rgb(220 38 38 / 0.45);
 
+  --veredicto-cielo: #252d3d;
+  --veredicto-lejano: #354155;
+  --veredicto-edificio: #52637a;
+  --veredicto-ventana: #9ba9bb;
+  --veredicto-suelo: #293344;
+
   --touch: 2.75rem; /* 44px */
+
+  /* Paleta propia del consultorio (S12): ilustración clara sobre el fondo oscuro.
+     No reutiliza los tokens surface/border: rellenos planos luminosos con
+     contorno de tinta y sombra suave, estilo dibujo a mano. */
+  --cons-ink: #2b2440; /* contorno de tinta: 12.6:1 sobre --cons-wall */
+  --cons-wall: #fff3d6; /* crema de pared */
+  --cons-wall-low: #f2d8a4; /* guardabarros de la pared */
+  --cons-floor: #e09543; /* piso cálido */
+  --cons-floor-line: #b56a24; /* juntas del piso */
+  --cons-door: #2ec4b6; /* puerta turquesa */
+  --cons-door-dark: #159485; /* panel interior de la puerta */
+  --cons-chair: #ff6b6b; /* sillas coral */
+  --cons-chair-alt: #ffa62b; /* silla central ámbar */
+  --cons-bed: #4cc9f0; /* mantas celestes */
+  --cons-sheet: #ffffff; /* sábanas */
+  --cons-desk: #7c5cbf; /* escritorio violeta */
+  --cons-paper: #fffdf4; /* papeles */
+  --cons-cross: #e63946; /* cruz del cartel */
+  --cons-plant: #3fa34d; /* planta */
+  --cons-shadow: rgb(43 36 64 / 0.22); /* sombra suave del piso */
 }
 
 @theme inline {
@@ -169,5 +195,55 @@ html .katex {
 @media (prefers-reduced-motion: reduce) {
   .icono-brillo::after {
     display: none;
+  }
+}
+
+/* Panel del proyector: "EN VIVO" con degradado animado y pulso de brillo (solo CSS) */
+.texto-en-vivo {
+  background: linear-gradient(90deg, var(--primary-text), var(--warning), var(--primary-text));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: texto-en-vivo 3s linear infinite;
+}
+@keyframes texto-en-vivo {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+.pastilla-en-vivo {
+  animation: pastilla-en-vivo 2.4s ease-in-out infinite;
+}
+@keyframes pastilla-en-vivo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 0);
+  }
+  50% {
+    box-shadow: 0 0 28px -4px rgb(220 38 38 / 0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .texto-en-vivo {
+    animation: none;
+    background: none;
+    color: var(--primary-text);
+  }
+  .pastilla-en-vivo {
+    animation: none;
+  }
+}
+
+/* Panel 2xl (1920x1080): cifras más bajas para que el gráfico de decisiones quepa en su columna */
+@media (min-width: 1536px) {
+  .cifras-panel [data-testid="tarjeta-estadistica"] {
+    padding: 1rem;
+  }
+  .cifras-panel [data-testid="stat-valor"] {
+    font-size: 4.5rem;
   }
 }

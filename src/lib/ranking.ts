@@ -1,9 +1,22 @@
+import { normalizarApodo } from "./apodos";
+import { resolverInsignias, type InsigniaInfo } from "./insignias";
+
 /** Regla del ranking: solo el primer intento por apodo y dificultad; desempate por menor tiempo total. */
 
-/** Apodo comparable: sin espacios en los bordes y sin distinguir mayúsculas (igual que lower(btrim()) en SQL). */
-export function normalizarApodo(apodo: string): string {
-  return apodo.trim().toLowerCase();
+/** Convierte ids recibidos por la API en chips visibles, omitiendo los que no conoce este cliente. */
+export function informacionInsignias(ids: readonly string[]): Pick<InsigniaInfo, "id" | "titulo" | "icono">[] {
+  return resolverInsignias(ids).map(({ id, titulo, icono }) => ({ id, titulo, icono }));
 }
+
+export const INICIO_TEMPORADA_ACTUAL = "2026-10-19T00:00:00.000Z";
+export const NOMBRE_TEMPORADA_ACTUAL = "Decisiones";
+export const ETIQUETA_TEMPORADA_ACTUAL = "Temporada actual: decisiones (desde el 19/10/2026). Las partidas anteriores quedan archivadas.";
+
+export function enTemporadaActual(creadaEn: string): boolean {
+  return Date.parse(creadaEn) >= Date.parse(INICIO_TEMPORADA_ACTUAL);
+}
+
+export { normalizarApodo };
 
 /** "m:ss" (segundo más cercano) o "—" si no hay dato. */
 export function formatearTiempoTotal(ms: number | null | undefined): string {
