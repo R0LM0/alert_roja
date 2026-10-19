@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Brain, Medal, ShieldCheck, Smile, Trophy, type LucideIcon } from "lucide-react";
+import { Brain, FlaskConical, Leaf, Medal, ShieldCheck, Smile, Trophy, Zap, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import type { IconoInsignia } from "@/lib/insignias";
 import type { EntradaRanking } from "@/lib/panel";
 import { ETIQUETA_TEMPORADA_ACTUAL, formatearTiempoTotal, informacionInsignias } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
@@ -11,8 +12,8 @@ import { cn } from "@/lib/utils";
 type Props = { ranking: EntradaRanking[] | undefined };
 
 const COLOR_PODIO = ["text-warning", "text-foreground", "text-primary-text"] as const;
-const ICONOS: Record<"brain" | "shield-check" | "smile", LucideIcon> = {
-  brain: Brain, "shield-check": ShieldCheck, smile: Smile,
+const ICONOS: Record<IconoInsignia, LucideIcon> = {
+  brain: Brain, "shield-check": ShieldCheck, smile: Smile, zap: Zap, leaf: Leaf, "flask-conical": FlaskConical,
 };
 
 function ChipsInsignias({ ids }: { ids: readonly string[] }) {

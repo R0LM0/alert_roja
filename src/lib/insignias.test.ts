@@ -40,9 +40,9 @@ describe("medallasInsignias", () => {
 });
 
 describe("chips del ranking", () => {
-  it("las medallas nuevas usan uno de los tres iconos que dibuja el panel", () => {
+  it("las medallas nuevas llegan al panel con su propio icono", () => {
     const chips = informacionInsignias(["rayo", "sin-panico", "experto", "perfecto"]);
-    expect(chips.map((c) => c.icono)).toEqual(["smile", "shield-check", "brain", "smile"]);
+    expect(chips.map((c) => c.icono)).toEqual(["zap", "leaf", "flask-conical", "smile"]);
     expect(chips.map((c) => c.titulo)).toEqual(["Rayo", "Sin pánico", "Experto", "Ronda perfecta"]);
   });
 });
