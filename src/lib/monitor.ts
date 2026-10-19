@@ -41,3 +41,9 @@ export const PALABRAS_PROHIBIDAS =
 export const POS_MONITOR: [number, number, number] = [0.5, 0.76, 0.86];
 /** Giro en Y: la pantalla queda a unos 25° hacia la cámara, sin tapar al paciente. */
 export const GIRO_MONITOR_Y = -0.45;
+
+/** En pantallas verticales (celular) el encuadre es angosto: el monitor se acerca al centro y se achica para no cortarse. */
+export function colocacionMonitor(aspecto: number): { posicion: [number, number, number]; escala: number } {
+  if (aspecto >= 1) return { posicion: POS_MONITOR, escala: 1 };
+  return { posicion: [0.25, 0.76, 1.05], escala: 0.5 };
+}

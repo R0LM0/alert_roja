@@ -254,22 +254,19 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
               </mesh>
             )}
             {forma.peinado === "largo" && (
-              <mesh position={[0, -0.14, -0.1]}>
-                <capsuleGeometry args={[0.14, 0.2, 6, 12]} />
-                <Mate color={pelo} alpha={a} />
-              </mesh>
-            )}
-            {forma.peinado === "moño" && (
-              <mesh position={[0, 0.1, -0.12]}>
-                <sphereGeometry args={[0.07, 10, 8]} />
-                <Mate color={pelo} alpha={a} />
-              </mesh>
-            )}
-            {forma.peinado === "coleta" && (
-              <mesh position={[0, -0.05, -0.19]} rotation={[0.5, 0, 0]}>
-                <capsuleGeometry args={[0.04, 0.22, 5, 8]} />
-                <Mate color={pelo} alpha={a} />
-              </mesh>
+              <>
+                <mesh position={[0, -0.14, -0.1]}>
+                  <capsuleGeometry args={[0.14, 0.2, 6, 12]} />
+                  <Mate color={pelo} alpha={a} />
+                </mesh>
+                {/* Mechones a los lados de la cara: lo único que la cámara ve de frente. */}
+                {[-1, 1].map((lado) => (
+                  <mesh key={`mechon-${lado}`} position={[lado * 0.155, -0.11, 0.02]} rotation={[0, 0, lado * 0.08]}>
+                    <capsuleGeometry args={[0.05, 0.24, 5, 10]} />
+                    <Mate color={pelo} alpha={a} />
+                  </mesh>
+                ))}
+              </>
             )}
             {forma.barba && (
               <>

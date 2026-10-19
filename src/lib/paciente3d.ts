@@ -20,7 +20,7 @@ const NOMBRES_MUJERES = new Set([
 export const EDADES = ["nino", "joven", "adulto", "mayor"] as const;
 export type Genero = "mujer" | "hombre";
 export type Edad = (typeof EDADES)[number];
-export type Peinado = "largo" | "moño" | "coleta" | "corto" | "calvo";
+export type Peinado = "largo" | "corto" | "calvo";
 
 function hashSemilla(seed: string): number {
   let hash = 2166136261;
@@ -99,9 +99,8 @@ export function formaPaciente(seed: string, genero: Genero, edad: Edad) {
 
   let peinado: Peinado;
   if (genero === "mujer") {
-    if (edad === "nino") peinado = variante % 2 === 0 ? "coleta" : "corto";
-    else if (canas) peinado = "moño";
-    else peinado = variante % 2 === 0 ? "largo" : "moño";
+    // Desde la cámara solo se ve el frente: el pelo largo cae a los lados de la cara.
+    peinado = "largo";
   } else {
     peinado = canas && variante === 0 ? "calvo" : "corto";
   }

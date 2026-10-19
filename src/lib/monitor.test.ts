@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { pacienteDeSemilla, pacientesDeRonda } from "./pacientes";
 import {
   ENCABEZADO_MONITOR,
+  colocacionMonitor,
   GIRO_MONITOR_Y,
   lineasMonitor,
   PALABRAS_PROHIBIDAS,
@@ -71,5 +72,14 @@ describe("posición del monitor en el escritorio", () => {
     expect(grados).toBeLessThanOrEqual(35);
     // Normal local +Z tras el giro en Y: (sen θ, 0, cos θ); con x=+0.62 debe ir hacia x<0.
     expect(Math.sin(GIRO_MONITOR_Y)).toBeLessThan(0);
+  });
+});
+
+describe("colocacionMonitor", () => {
+  it("en escritorio usa la posición base y en celular se acerca al centro más chico", () => {
+    expect(colocacionMonitor(1.6)).toEqual({ posicion: POS_MONITOR, escala: 1 });
+    const movil = colocacionMonitor(390 / 844);
+    expect(movil.posicion[0]).toBeLessThan(POS_MONITOR[0]);
+    expect(movil.escala).toBeLessThan(1);
   });
 });

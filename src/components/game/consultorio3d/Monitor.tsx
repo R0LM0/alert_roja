@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import { GIRO_MONITOR_Y, lineasMonitor, type LineasMonitor, POS_MONITOR } from "@/lib/monitor";
+import { colocacionMonitor, GIRO_MONITOR_Y, lineasMonitor, type LineasMonitor } from "@/lib/monitor";
 
 const ANCHO = 512;
 const ALTO = 320;
@@ -94,6 +94,8 @@ const COLOR_TECLA = "#b7a7cb";
  */
 export function Monitor({ nombre }: { nombre?: string }) {
   const invalidar = useThree((s) => s.invalidate);
+  const aspecto = useThree((s) => s.size.width / Math.max(1, s.size.height));
+  const { posicion, escala } = colocacionMonitor(aspecto);
   const lienzo = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = ANCHO;
@@ -125,7 +127,7 @@ export function Monitor({ nombre }: { nombre?: string }) {
   );
 
   return (
-    <group position={POS_MONITOR} rotation={[0, GIRO_MONITOR_Y, 0]}>
+    <group position={posicion} rotation={[0, GIRO_MONITOR_Y, 0]} scale={escala}>
       {/* Soporte y base finos; el marco redondeado queda sobre ellos. */}
       <RoundedBox args={[0.24, 0.016, 0.17]} radius={0.006} smoothness={3} position={[0, 0.008, 0]}>
         <meshStandardMaterial color={COLOR_SOPORTE} roughness={0.6} />
