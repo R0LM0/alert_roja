@@ -20,15 +20,15 @@ const CLAVE_STORAGE = "alerta-roja:silenciado";
 type LectorStorage = Pick<Storage, "getItem">;
 
 /**
- * Preferencia guardada de silencio. Silenciado por defecto: el navegador exige
- * un gesto del usuario antes de reproducir audio; el toggle es ese gesto.
+ * Preferencia guardada de silencio. Con sonido por defecto: el motor espera el primer
+ * gesto del jugador (p. ej. "¡Empezar turno!") antes de crear el AudioContext.
  */
 export function leerSilencioGuardado(storage?: LectorStorage): boolean {
   try {
     const guardado = (storage ?? window.localStorage).getItem(CLAVE_STORAGE);
-    return guardado === null ? true : guardado === "1";
+    return guardado === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
