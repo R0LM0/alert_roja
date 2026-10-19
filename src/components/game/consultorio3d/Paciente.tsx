@@ -52,6 +52,9 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
   const cabeza = edad === "nino" ? 1.22 : 1;
   const encorvado = encorvamientoPaciente(edad);
   const alphaInicial = reducido ? 1 : 0;
+  // Posición inicial estable: un arreglo nuevo en cada render hacía que R3F devolviera
+  // al paciente a la puerta cuando el turno se re-renderizaba tras su llegada.
+  const posicionInicial = useMemo(() => posPaciente(0, false, reducido), [reducido]);
   const grupo = useRef<THREE.Group>(null);
   const piernaIzquierda = useRef<THREE.Group>(null);
   const piernaDerecha = useRef<THREE.Group>(null);
@@ -70,9 +73,11 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
     alLlegarActual.current?.();
   }, [reducido, saliendo]);
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (!grupo.current || reducido) return;
-    const ahora = clock.elapsedTime;
+    // Reloj propio: R3F reinicia clock.elapsedTime al pasar de "always" a "demand" (justo
+    // cuando el paciente llega), y el tiempo negativo lo devolvía a la puerta.
+    const ahora = performance.now() / 1000;
     if (inicioEntrada.current === null) inicioEntrada.current = ahora;
     if (saliendo && inicioSalida.current === null) inicioSalida.current = ahora;
     const t = (ahora - (saliendo ? inicioSalida.current! : inicioEntrada.current)) * 1000;
@@ -108,7 +113,7 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
   const pelo = forma.colorPelo;
 
   return (
-    <group ref={grupo} position={posPaciente(0, false, reducido)}>
+    <group ref={grupo} position={posicionInicial}>
       {/* Escala uniforme: la estatura y la edad cambian el cuerpo entero, no solo una caja. */}
       <group scale={escala}>
         <group ref={piernaIzquierda} position={[-0.11, 0.82, 0]}>
