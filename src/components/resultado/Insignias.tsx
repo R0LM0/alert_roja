@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Brain, FlaskConical, Leaf, Lock, ShieldCheck, Smile, Zap, type LucideIcon } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { IconoInsignia, InsigniaInfo, MedallaInsignia } from "@/lib/insignias";
+import { useSonido } from "@/lib/sound";
 
 const ICONOS: Record<IconoInsignia, LucideIcon> = {
   brain: Brain,
@@ -83,6 +85,14 @@ export function HistorialInsignias({ insignias }: { insignias: InsigniaInfo[] })
 export function Insignias({ medallas }: { medallas: MedallaInsignia[] }) {
   const ganadas = medallas.filter((m) => m.ganada).length;
   let indiceGanada = 0;
+  const { play } = useSonido();
+  // Destello al ganar: suena una vez, al montar, cuando entra la primera medalla.
+  useEffect(() => {
+    if (ganadas === 0) return;
+    const id = setTimeout(() => play("insignia"), 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <Card className="flex flex-col gap-3">
       <CardTitle>Insignias</CardTitle>
