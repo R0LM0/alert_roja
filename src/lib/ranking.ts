@@ -1,3 +1,4 @@
+import { normalizarApodo } from "./apodos";
 import { resolverInsignias, type InsigniaInfo } from "./insignias";
 
 /** Regla del ranking: solo el primer intento por apodo y dificultad; desempate por menor tiempo total. */
@@ -15,10 +16,7 @@ export function enTemporadaActual(creadaEn: string): boolean {
   return Date.parse(creadaEn) >= Date.parse(INICIO_TEMPORADA_ACTUAL);
 }
 
-/** Apodo comparable: sin espacios en los bordes y sin distinguir mayúsculas (igual que lower(btrim()) en SQL). */
-export function normalizarApodo(apodo: string): string {
-  return apodo.trim().toLowerCase();
-}
+export { normalizarApodo };
 
 /** "m:ss" (segundo más cercano) o "—" si no hay dato. */
 export function formatearTiempoTotal(ms: number | null | undefined): string {

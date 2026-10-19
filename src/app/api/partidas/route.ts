@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reclamarApodo } from "@/lib/apodos-db";
 import { errorJson, logError } from "@/lib/api";
 import { puntajeDeRespuestas, type ModalidadCaso } from "@/lib/caso-bayesiano";
 import { sql } from "@/lib/db";
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
     return errorJson(400, "Datos inválidos", { detalle: parsed.error.flatten().fieldErrors });
   }
 
-  const { jugador, prevalencia, respuestas } = parsed.data;
+  const { jugador, dueno, prevalencia, respuestas } = parsed.data;
   // Clave de idempotencia: la del cliente (reintentos) o una nueva.
   const id = parsed.data.id ?? crypto.randomUUID();
   const ordenadas = [...respuestas].sort((a, b) => a.orden - b.orden);
@@ -111,6 +112,8 @@ export async function POST(req: Request) {
   const tiempoTotalMs = ordenadas.reduce((a, r) => a + r.tiempo_ms, 0);
 
   try {
+    // Apodo de otro dispositivo: no se guarda. Si está libre, queda reservado aquí (idempotente).
+    if (!(await reclamarApodo(jugador, dueno))) return errorJson(409, "Ese apodo ya está en uso");
     let filas: Awaited<ReturnType<typeof guardar>>;
     try {
       filas = await guardar(id, jugador, prevalencia, puntaje, tiempoTotalMs, ordenadas, false);

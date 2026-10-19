@@ -16,6 +16,7 @@ function resultado() {
     "Ana",
     0.1,
     ronda.map((p) => ({ paciente: p, estimacion_pct: 40, decision: "aislar" as const, tiempo_ms: 800 })),
+    "5b1c9e2a-7d3f-4e8a-9c60-2f4b8d1e7a35",
   );
   return {
     jugador: "Ana",

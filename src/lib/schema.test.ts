@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { armarPartida, crearRonda } from "./ronda";
-import { partidaSchema } from "./schema";
+import { partidaSchema, reservaApodoSchema } from "./schema";
+
+const DUENO = "5b1c9e2a-7d3f-4e8a-9c60-2f4b8d1e7a35";
 
 const base = () => {
   const ronda = crearRonda("schema", 0.1, () => 0.9);
@@ -8,6 +10,7 @@ const base = () => {
     "Ana",
     0.1,
     ronda.map((p) => ({ paciente: p, estimacion_pct: 30, decision: "liberar" as const, tiempo_ms: 400 })),
+    DUENO,
   );
 };
 
@@ -47,6 +50,25 @@ describe("respuestaSchema.estimacion_pct", () => {
     for (const invalida of [-1, 101, 1.5, "50"]) {
       expect(partidaSchema.safeParse({ ...original, respuestas: [{ ...original.respuestas[0], estimacion_pct: invalida }, ...original.respuestas.slice(1)] }).success).toBe(false);
     }
+  });
+});
+
+describe("partidaSchema.dueno (dispositivo que reserva el apodo)", () => {
+  it("es obligatorio y debe ser uuid", () => {
+    const { dueno: _omitido, ...sinDueno } = base();
+    expect(partidaSchema.safeParse(sinDueno).success).toBe(false);
+    expect(partidaSchema.safeParse({ ...base(), dueno: "no-es-uuid" }).success).toBe(false);
+    expect(partidaSchema.safeParse(base()).success).toBe(true);
+  });
+});
+
+describe("reservaApodoSchema", () => {
+  it("valida apodo con el mismo filtro que la partida y dueno uuid", () => {
+    expect(reservaApodoSchema.safeParse({ apodo: "  Ana ", dueno: DUENO }).success).toBe(true);
+    expect(reservaApodoSchema.safeParse({ apodo: "", dueno: DUENO }).success).toBe(false);
+    expect(reservaApodoSchema.safeParse({ apodo: "x".repeat(21), dueno: DUENO }).success).toBe(false);
+    expect(reservaApodoSchema.safeParse({ apodo: "Ana", dueno: "1" }).success).toBe(false);
+    expect(reservaApodoSchema.safeParse({ apodo: "Ana" }).success).toBe(false);
   });
 });
 

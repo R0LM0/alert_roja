@@ -89,6 +89,8 @@ describe("nuevoIdPartida", () => {
   });
 });
 
+const DUENO = "5b1c9e2a-7d3f-4e8a-9c60-2f4b8d1e7a35";
+
 describe("armarPartida", () => {
   const ronda = crearRonda("s2", 0.1, prng(3));
   const respuestas: RespuestaUI[] = ronda.map((p, i) => ({
@@ -99,8 +101,9 @@ describe("armarPartida", () => {
   }));
 
   it("produce un payload que cumple el schema del POST", () => {
-    const payload = armarPartida("  Ana ", 0.1, respuestas);
+    const payload = armarPartida("  Ana ", 0.1, respuestas, DUENO);
     expect(partidaSchema.safeParse(payload).success).toBe(true);
+    expect(payload.dueno).toBe(DUENO);
     expect(payload.prevalencia).toBe(0.1);
     expect(payload.respuestas[2]).toEqual({
       orden: 3,
@@ -113,27 +116,27 @@ describe("armarPartida", () => {
   });
 
   it("transporta la evidencia de cada paciente en su respuesta", () => {
-    const payload = armarPartida("Ana", 0.1, respuestas);
+    const payload = armarPartida("Ana", 0.1, respuestas, DUENO);
     expect(payload.respuestas.map((r) => r.evidencia)).toEqual(ronda.map((p) => p.evidencia));
   });
 
   it("conserva estimación nula en el payload de decisión pura", () => {
-    const payload = armarPartida("Ana", 0.1, respuestas.map((r) => ({ ...r, estimacion_pct: null })));
+    const payload = armarPartida("Ana", 0.1, respuestas.map((r) => ({ ...r, estimacion_pct: null })), DUENO);
     expect(payload.respuestas.every((r) => r.estimacion_pct === null)).toBe(true);
     expect(partidaSchema.safeParse(payload).success).toBe(true);
   });
 
   it("incluye el id de idempotencia cuando se entrega y lo omite si no", () => {
     const id = "3f2b8c1e-9d4a-4b7e-8a61-0c5d2e7f9a10";
-    const con = armarPartida("Ana", 0.1, respuestas, id);
+    const con = armarPartida("Ana", 0.1, respuestas, DUENO, id);
     expect(con.id).toBe(id);
     expect(partidaSchema.safeParse(con).success).toBe(true);
-    expect("id" in armarPartida("Ana", 0.1, respuestas)).toBe(false);
+    expect("id" in armarPartida("Ana", 0.1, respuestas, DUENO)).toBe(false);
   });
 
   it("redondea y acota estimación y tiempo", () => {
     const raras = respuestas.map((r) => ({ ...r, estimacion_pct: 100.6, tiempo_ms: 999_999.4 }));
-    const payload = armarPartida("Ana", 0.01, raras);
+    const payload = armarPartida("Ana", 0.01, raras, DUENO);
     expect(payload.respuestas[0].estimacion_pct).toBe(100);
     expect(payload.respuestas[0].tiempo_ms).toBe(600_000);
     expect(partidaSchema.safeParse(payload).success).toBe(true);

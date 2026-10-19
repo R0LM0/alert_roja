@@ -7,6 +7,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 type Cuerpo = {
   id?: string;
   jugador: string;
+  dueno: string;
   prevalencia: number;
   respuestas: { orden: number; estimacion_pct: number | null; decision: string; estaba_infectado: boolean }[];
 };
@@ -24,6 +25,10 @@ function vigilarErrores(page: Page): string[] {
 /** Intercepta el guardado: no escribe en la base y deja inspeccionar lo que envía el cliente. */
 async function simularGuardado(page: Page): Promise<() => Request> {
   let ultima: Request | undefined;
+  // Reserva de apodo: el apodo queda libre (no hay base en este test).
+  await page.route("**/api/apodos", (route) =>
+    route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true }) }),
+  );
   await page.route("**/api/partidas", async (route) => {
     ultima = route.request();
     const cuerpo = route.request().postDataJSON() as Cuerpo;
@@ -80,6 +85,7 @@ test("una ronda completa en el celular: de la portada a la revelación", async (
   const cuerpo = peticion().postDataJSON() as Cuerpo;
   expect(cuerpo.id).toMatch(UUID);
   expect(cuerpo.jugador).toBe("Tester E2E");
+  expect(cuerpo.dueno).toMatch(UUID);
   expect(cuerpo.prevalencia).toBe(0.1);
   expect(cuerpo.respuestas).toHaveLength(PACIENTES);
   expect(cuerpo.respuestas.map((r) => r.orden)).toEqual(Array.from({ length: PACIENTES }, (_, i) => i + 1));

@@ -20,10 +20,19 @@ export const jugadorSchema = z
   .max(20, "Máximo 20 caracteres")
   .refine((s) => !tieneGroseria(s), "Elegí otro apodo");
 
+/** Token anónimo del dispositivo que reserva el apodo (localStorage, nunca se muestra). */
+export const duenoSchema = z.string().uuid();
+
+export const reservaApodoSchema = z.object({
+  apodo: jugadorSchema,
+  dueno: duenoSchema,
+});
+
 export const partidaSchema = z.object({
   /** Clave de idempotencia generada por el cliente; si falta, la genera el servidor. */
   id: z.string().uuid().optional(),
   jugador: jugadorSchema,
+  dueno: duenoSchema,
   prevalencia: prevalenciaSchema,
   respuestas: z
     .array(respuestaSchema)

@@ -11,12 +11,15 @@ function almacenFalso(inicial: Record<string, string> = {}): AlmacenTexto {
   };
 }
 
+const DUENO = "5b1c9e2a-7d3f-4e8a-9c60-2f4b8d1e7a35";
+
 function partida(jugador = "Ana") {
   const ronda = crearRonda(`s-${jugador}`, 0.1, () => 0.9);
   return armarPartida(
     jugador,
     0.1,
     ronda.map((p) => ({ paciente: p, estimacion_pct: 33, decision: "liberar" as const, tiempo_ms: 500 })),
+    DUENO,
   );
 }
 

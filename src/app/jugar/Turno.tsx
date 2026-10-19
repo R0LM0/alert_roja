@@ -17,6 +17,7 @@ const Consultorio3D = dynamic(() => import("@/components/game/consultorio3d/Cons
 import { CuentaRegresiva } from "@/components/game/cuenta-regresiva";
 import { ProgresoPacientes } from "@/components/game/progreso-pacientes";
 import { TarjetaPaciente } from "@/components/game/TarjetaPaciente";
+import { duenoLocal } from "@/lib/apodos";
 import { enviarPartida } from "@/lib/cola-offline";
 import {
   armarPartida,
@@ -180,7 +181,7 @@ export function Turno({ modo }: { modo: Modo }) {
     if (enviada.current) return;
     enviada.current = true;
     setFase("enviando");
-    const payload = armarPartida(apodo, prevalencia, respuestas.current, idPartida.current);
+    const payload = armarPartida(apodo, prevalencia, respuestas.current, duenoLocal(), idPartida.current);
     const r = await enviarPartida(payload);
     if (r.estado === "rechazado") {
       setMensajeError(r.mensaje);

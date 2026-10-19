@@ -28,7 +28,7 @@ src/
   app/            Rutas: / (inicio), /jugar, /resultado, /panel y /api/* (partidas, stats, ranking, export)
   components/     UI sin cálculos: game/, resultado/, panel/, three/, ui/
   lib/            Lógica pura y testeada: stats, ronda, resultado, formula-bayes, panel, ranking, export-xlsx, csv, cola-offline, rate-limit, db
-db/migrations/    001_init.sql (partidas + respuestas), 002_primer_intento.sql (regla del ranking)
+db/migrations/    001_init.sql (partidas + respuestas), 002_primer_intento.sql (regla del ranking), 005_apodos.sql (apodos únicos)
 scripts/          migrate.mjs (npm run db:migrate)
 e2e/              Test de Playwright: una ronda completa en celular
 ```
@@ -61,7 +61,7 @@ DATABASE_URL=postgresql://alerta:alerta@localhost:5432/alerta
 
 ```bash
 npm install
-npm run db:migrate                # crea las tablas y aplica 001 y 002
+npm run db:migrate                # crea las tablas y aplica 001, 002 y 005
 npm run dev                       # http://localhost:3000
 ```
 
@@ -102,6 +102,7 @@ El límite de peticiones por IP vive en memoria: en Vercel es **por instancia se
 - El QR apunta a `NEXT_PUBLIC_SITE_URL`. En la feria usa la URL pública, o la IP de tu red local (`http://192.168.x.x:3000`) si todos están en el mismo Wi-Fi.
 - Por HTTP en LAN el juego funciona (hay respaldo para generar el id de partida sin `crypto.randomUUID`), pero el audio y el WebGL se comportan mejor con HTTPS.
 - Proyecta `/panel` a 1920x1080. El filtro Normal / Experto cambia las estadísticas y el histograma.
+- **Apodos únicos**: cada apodo queda reservado para el dispositivo que lo usó primero (token `dueno` en `localStorage`, clave `alerta-roja:dueno`; nunca se muestra). Otro dispositivo recibe un 409 con apodos libres sugeridos. Si se borran los datos del navegador, se pierde la reserva. Migración `005_apodos.sql` (tabla `apodos`); la base de la feria se reinicia, así que no hay relleno de partidas previas.
 - **Ranking**: solo cuenta el **primer intento por apodo** (sin distinguir mayúsculas ni espacios) en cada dificultad; el desempate es el **menor tiempo total** y luego la partida más antigua. Los intentos siguientes se guardan, pero no entran al ranking ni a las estadísticas del público (histograma, promedio, VPP observado, % que sobreestimó). El contador en vivo sí cuenta todas las partidas.
 - **Exportar Excel** (o `/api/export?key=TU_CLAVE`) baja un `.xlsx` con las hojas Resumen (cifras y explicación), Ranking, Histograma y Respuestas (una fila por respuesta, con la columna Primer intento). La hoja Histograma incluye un gráfico de columnas nativo (editable en Excel) por dificultad, con el tramo del VPP teórico resaltado. El enlace **CSV** (`/api/export?formato=csv&key=TU_CLAVE`) baja lo mismo en UTF-8 con BOM. Las horas van en hora de Managua (UTC−6).
 - Si el celular pierde conexión al terminar, la partida queda en cola local y se reenvía sola; la pantalla muestra "guardado" o "pendiente".

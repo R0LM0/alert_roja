@@ -67,11 +67,13 @@ export function armarPartida(
   jugador: string,
   prevalencia: Prevalencia,
   respuestas: RespuestaUI[],
+  dueno: string,
   id?: string,
 ): PartidaInput {
   return {
     ...(id ? { id } : {}),
     jugador: jugador.trim(),
+    dueno,
     prevalencia,
     respuestas: respuestas.map((r) => ({
       orden: r.paciente.orden,

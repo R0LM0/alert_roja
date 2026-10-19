@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { Microscope } from "lucide-react";
+import { Loader2, Microscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { duenoLocal, reservarApodo } from "@/lib/apodos";
 import type { Modo } from "@/lib/ronda";
 import { APODO_MAX, apodoRecordado, guardarApodo, recordarApodo, validarApodo } from "@/lib/sesion-juego";
 
-/** Apodo + botón de empezar. Valida con el mismo filtro que el servidor y navega a /jugar. */
+/** Apodo + botón de empezar. Valida, reserva el apodo en el servidor y navega a /jugar. */
 export function CampoApodo() {
   const router = useRouter();
   const [apodo, setApodo] = useState("");
@@ -25,18 +26,36 @@ export function CampoApodo() {
   useEffect(() => {
     void import("@/components/game/consultorio3d/Consultorio3D");
   }, []);
+  const [verificando, setVerificando] = useState(false);
+  const [sugerencias, setSugerencias] = useState<string[]>([]);
 
   useEffect(() => {
     setApodo(apodoRecordado());
   }, []);
 
-  function empezar(modo: Modo) {
+  async function empezar(modo: Modo) {
+    if (verificando) return;
     const problema = validarApodo(apodo);
     if (problema) {
       setError(problema);
       return;
     }
     const limpio = apodo.trim();
+    setVerificando(true);
+    setSugerencias([]);
+    const reserva = await reservarApodo(limpio, duenoLocal());
+    if (reserva.estado === "ocupado") {
+      setError(reserva.mensaje);
+      setSugerencias(reserva.sugerencias);
+      setVerificando(false);
+      return;
+    }
+    if (reserva.estado === "rechazado") {
+      setError(reserva.mensaje);
+      setVerificando(false);
+      return;
+    }
+    // Libre o sin conexión: se sigue; el servidor de la partida valida de nuevo.
     guardarApodo(limpio);
     recordarApodo(limpio);
     const destino = modo === "experto" ? "/jugar?modo=experto" : "/jugar";
@@ -56,7 +75,7 @@ export function CampoApodo() {
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        empezar("normal");
+        void empezar("normal");
       }}
     >
       {/* El error del Input usa role="alert": se anuncia solo (región viva). */}
@@ -72,10 +91,38 @@ export function CampoApodo() {
         onChange={(e) => {
           setApodo(e.target.value);
           setError(undefined);
+          setSugerencias([]);
         }}
       />
-      <Button type="submit" size="xl" className="w-full">
-        ¡Empezar turno!
+      {sugerencias.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Apodos libres sugeridos">
+          <span className="w-full text-sm text-muted">Prueba con:</span>
+          {sugerencias.map((s) => (
+            <Button
+              key={s}
+              type="button"
+              variant="outline"
+              size="md"
+              className="rounded-full"
+              onClick={() => {
+                setApodo(s);
+                setError(undefined);
+                setSugerencias([]);
+              }}
+            >
+              {s}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      <Button type="submit" size="xl" className="w-full" disabled={verificando}>
+        {verificando ? (
+          <>
+            <Loader2 aria-hidden="true" className="animate-spin" /> Verificando apodo…
+          </>
+        ) : (
+          "¡Empezar turno!"
+        )}
       </Button>
       {saliendo ? (
         <motion.div
@@ -86,7 +133,13 @@ export function CampoApodo() {
           transition={{ duration: 0.25, ease: "easeOut" }}
         />
       ) : null}
-      <Button type="button" variant="ghost" className="self-center" onClick={() => empezar("experto")}>
+      <Button
+        type="button"
+        variant="ghost"
+        className="self-center"
+        disabled={verificando}
+        onClick={() => void empezar("experto")}
+      >
         <Microscope aria-hidden="true" /> Modo experto (enfermedad más rara)
       </Button>
     </form>
