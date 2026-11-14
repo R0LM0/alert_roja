@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { BarChart3 } from "lucide-react";
-import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, LabelList, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Card } from "@/components/ui/card";
+import { UMBRAL_DECISION } from "@/lib/caso-bayesiano";
 import { formatoNumero, type EvidenciaPanel } from "@/lib/panel";
 
 type Props = {
@@ -22,7 +23,7 @@ const COLOR_OPTIMA = "var(--warning)";
 /** Por debajo de este ancho (px) las etiquetas del eje son más cortas y chicas. */
 const ANCHO_COMPACTO = 640;
 
-/** Fila del gráfico. `optimaPct` solo existe para mostrar la barra revelada (100 = aislar, 0 = liberar). */
+/** Fila del gráfico. `optimaPct` es la probabilidad de infección según Bayes; la decisión óptima sale de compararla con el umbral. */
 type FilaGrafico = {
   etiqueta: string;
   casos: number;
@@ -53,7 +54,7 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
         casos: e.casos,
         aislaronPct: e.aislaronPct,
         optima: e.optima,
-        optimaPct: e.optima === "aislar" ? 100 : 0,
+        optimaPct: e.posteriorPct,
         fantasma: 100,
       })),
     [porEvidencia],
@@ -87,7 +88,7 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
               ) : (
                 <span aria-hidden="true" className="size-3.5 rounded-sm border-2 border-dashed border-muted" />
               )}
-              {revelar ? "Decisión óptima" : "Decisión óptima: ?"}
+              {revelar ? "Probabilidad de infección (Bayes) y decisión óptima" : "Decisión óptima: ?"}
             </li>
           </ul>
 
@@ -142,6 +143,15 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
                   />
                 </Bar>
                 {revelar ? (
+                  <ReferenceLine
+                    x={UMBRAL_DECISION * 100}
+                    stroke={COLOR_OPTIMA}
+                    strokeDasharray="4 4"
+                    strokeWidth={2}
+                    label={{ value: `Umbral ${formatoNumero(UMBRAL_DECISION * 100, 0)} %`, position: "top", fill: COLOR_OPTIMA, fontSize: compacto ? 11 : 14 }}
+                  />
+                ) : null}
+                {revelar ? (
                   <Bar
                     dataKey="optimaPct"
                     name="Decisión óptima"
@@ -152,9 +162,12 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
                     animationDuration={700}
                   >
                     <LabelList
-                      dataKey="optima"
+                      dataKey="optimaPct"
                       position="right"
-                      formatter={(v: unknown) => (v === "aislar" ? "Aislar" : "Liberar")}
+                      formatter={(v: unknown) => {
+                        const pct = Number(v);
+                        return `${formatoNumero(pct, 0)} % · ${pct > UMBRAL_DECISION * 100 ? "Aislar" : "Liberar"}`;
+                      }}
                       fill={COLOR_OPTIMA}
                       fontSize={compacto ? 13 : 20}
                       fontWeight={700}
@@ -181,7 +194,7 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
               <th scope="col">Evidencia</th>
               <th scope="col">Casos</th>
               <th scope="col">Aisló (%)</th>
-              {revelar ? <th scope="col">Decisión óptima</th> : null}
+              {revelar ? <th scope="col">Probabilidad Bayes y decisión óptima</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -190,7 +203,7 @@ export function GraficoDecisiones({ porEvidencia, n, revelar }: Props) {
                 <th scope="row">{f.etiqueta}</th>
                 <td>{f.casos}</td>
                 <td>{f.aislaronPct === null ? "sin casos" : formatoNumero(f.aislaronPct, 0)}</td>
-                {revelar ? <td>{f.optima}</td> : null}
+                {revelar ? <td>{`${formatoNumero(f.optimaPct, 0)} % · ${f.optima}`}</td> : null}
               </tr>
             ))}
           </tbody>
