@@ -156,8 +156,10 @@ for (const vista of VISTAS) {
       await expect(tarjeta(page, "VPP teórico").getByTestId("stat-valor")).toHaveText("33,3 %");
       await expect(tarjeta(page, "VPP observado").getByTestId("stat-valor")).toHaveText("40,6 %");
       await expect(page.getByRole("button", { name: "Ocultar respuesta" })).toHaveAttribute("aria-pressed", "true");
-      await expect(page.getByRole("list", { name: "Leyenda" }).getByText("Decisión óptima", { exact: true })).toBeVisible();
-      await expect(page.getByText("Aislar", { exact: true }).first()).toBeVisible();
+      await expect(page.getByRole("list", { name: "Leyenda" }).getByText("Probabilidad de infección (Bayes) y decisión óptima", { exact: true })).toBeVisible();
+      // La barra revelada muestra la probabilidad de Bayes y la decisión, no un 100 % fijo.
+      await expect(page.getByText(/^\d+ % · Aislar$/).first()).toBeVisible();
+      await expect(page.getByText("Umbral 25 %")).toBeVisible();
     });
 
     test("sin respuestas: el mensaje no choca con los ejes y no hay desborde", async ({ page }) => {

@@ -20,6 +20,8 @@ import {
   pasoWalk,
   posPaciente,
   POS_CUARENTENA,
+  CABEZA,
+  casquetePelo,
 } from "./paciente3d";
 
 describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => {
@@ -234,5 +236,61 @@ describe("paciente 3D: recorrido dirigido por el turno (S4, S5, S7, S9)", () => 
     expect(new Set(variantes.map(({ camisa }) => camisa)).size).toBe(5);
     expect(new Set(variantes.map(({ pantalon }) => pantalon)).size).toBe(4);
     expect(new Set(variantes.map(({ piel }) => piel)).size).toBe(4);
+  });
+});
+
+describe("pelo: el casquete cubre la coronilla (nadie sale pelón sin querer)", () => {
+  /** Puntos de la superficie de la cabeza por encima de `desdeY`, en todas las direcciones. */
+  function puntosCabeza(desdeY: number): [number, number, number][] {
+    const [ex, ey, ez] = CABEZA.escala;
+    const puntos: [number, number, number][] = [];
+    for (let polar = 0; polar <= 90; polar += 3) {
+      for (let azimut = 0; azimut < 360; azimut += 15) {
+        const p = (polar * Math.PI) / 180;
+        const a = (azimut * Math.PI) / 180;
+        const y = CABEZA.radio * ey * Math.cos(p);
+        if (y < desdeY) continue;
+        puntos.push([CABEZA.radio * ex * Math.sin(p) * Math.cos(a), y, CABEZA.radio * ez * Math.sin(p) * Math.sin(a)]);
+      }
+    }
+    return puntos;
+  }
+
+  /** Distancia al centro del casquete (en su espacio sin escalar) y ángulo polar desde arriba. */
+  function enCasquete(punto: [number, number, number], casquete: NonNullable<ReturnType<typeof casquetePelo>>) {
+    const q = punto.map((v, i) => (v - casquete.posicion[i]) / casquete.escala[i]);
+    const distancia = Math.hypot(q[0], q[1], q[2]);
+    return { distancia, polar: Math.acos(q[1] / distancia) };
+  }
+
+  it.each(["largo", "corto"] as const)("peinado %s: la piel de la coronilla queda bajo el pelo", (peinado) => {
+    const casquete = casquetePelo(peinado);
+    expect(casquete).not.toBeNull();
+    const puntos = puntosCabeza(0.1);
+    expect(puntos.length).toBeGreaterThan(100);
+    for (const punto of puntos) {
+      const { distancia, polar } = enCasquete(punto, casquete!);
+      // Margen de 5 mm: sin piel asomando ni parpadeo entre superficies casi coincidentes.
+      expect(distancia).toBeLessThan(casquete!.radio - 0.005);
+      expect(polar).toBeLessThan(casquete!.apertura);
+    }
+  });
+
+  it.each(["largo", "corto"] as const)("peinado %s: el pelo no tapa los ojos", (peinado) => {
+    const casquete = casquetePelo(peinado)!;
+    for (const lado of [-1, 1]) {
+      // Borde superior del ojo (centro 0.025 + radio 0.021), ver Paciente.tsx.
+      expect(enCasquete([lado * 0.058, 0.046, 0.15], casquete).polar).toBeGreaterThan(casquete.apertura);
+    }
+  });
+
+  it("calvo no lleva casquete y solo puede tocarle a un hombre mayor", () => {
+    expect(casquetePelo("calvo")).toBeNull();
+    for (let i = 0; i < 80; i++) {
+      for (const edad of EDADES) {
+        expect(formaPaciente(`calvo-${i}`, "mujer", edad).peinado).toBe("largo");
+        if (edad !== "mayor") expect(formaPaciente(`calvo-${i}`, "hombre", edad).peinado).toBe("corto");
+      }
+    }
   });
 });
