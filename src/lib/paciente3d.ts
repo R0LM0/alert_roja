@@ -121,6 +121,29 @@ export function formaPaciente(seed: string, genero: Genero, edad: Edad) {
   };
 }
 
+/** Cabeza: esfera achatada a los lados y alargada hacia arriba (radio y escala por eje). */
+export const CABEZA: { radio: number; escala: [number, number, number] } = { radio: 0.165, escala: [0.92, 1.04, 0.95] };
+
+/**
+ * Casquete de pelo sobre la cabeza: esfera recortada desde arriba hasta `apertura` (rad).
+ * Envuelve la cabeza entera con margen: si el casquete queda más bajo que el cráneo,
+ * la piel asoma por la coronilla y el paciente se ve pelón desde la cámara.
+ */
+export function casquetePelo(peinado: Peinado): {
+  radio: number;
+  posicion: [number, number, number];
+  escala: [number, number, number];
+  apertura: number;
+} | null {
+  if (peinado === "calvo") return null;
+  return {
+    radio: 0.176,
+    posicion: [0, 0.008, -0.006],
+    escala: [1, 1.04, 1.03],
+    apertura: (peinado === "corto" ? 0.36 : 0.4) * Math.PI,
+  };
+}
+
 /** El paciente mira en la dirección de su destino, con un giro suave al iniciar la marcha. */
 export function anguloSalida(t: number, salida: SalidaPaciente = "puerta"): number {
   if (t <= 0) return 0;
