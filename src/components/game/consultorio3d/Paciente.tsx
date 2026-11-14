@@ -6,6 +6,8 @@ import * as THREE from "three";
 import {
   alphaEntrada,
   anguloSalida,
+  CABEZA,
+  casquetePelo,
   coloresPaciente,
   debeAvisarLlegada,
   derivarAspecto,
@@ -46,6 +48,7 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
   const aspecto = useMemo(() => derivarAspecto(seed), [seed]);
   const colores = useMemo(() => coloresPaciente(seed), [seed]);
   const forma = useMemo(() => formaPaciente(seed, genero, edad), [seed, genero, edad]);
+  const casquete = useMemo(() => casquetePelo(forma.peinado), [forma.peinado]);
   const escala = escalaPaciente(edad, aspecto.altura);
   const ancho = aspecto.contextura * (genero === "mujer" ? 0.92 : 1.06);
   const hombros = genero === "mujer" ? 0.2 : 0.235;
@@ -202,8 +205,8 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
 
           {/* Cabeza: esfera con cara neutra (ojos, nariz, boca) y pelo como casquetes. */}
           <group position={[0, 0.72, 0]} scale={cabeza}>
-            <mesh scale={[0.92, 1.04, 0.95]}>
-              <sphereGeometry args={[0.165, 20, 14]} />
+            <mesh scale={CABEZA.escala}>
+              <sphereGeometry args={[CABEZA.radio, 20, 14]} />
               <Mate color={piel} alpha={a} />
             </mesh>
             {[-1, 1].map((lado) => (
@@ -247,9 +250,9 @@ export function Paciente({ seed, nombre, saliendo, salida, alLlegar, reducido }:
               </group>
             )}
 
-            {forma.peinado !== "calvo" && (
-              <mesh position={[0, 0.012, -0.008]} scale={[1, 0.9, 1.03]}>
-                <sphereGeometry args={[0.172, 16, 10, 0, Math.PI * 2, 0, (forma.peinado === "corto" ? 0.36 : 0.4) * Math.PI]} />
+            {casquete && (
+              <mesh position={casquete.posicion} scale={casquete.escala}>
+                <sphereGeometry args={[casquete.radio, 16, 10, 0, Math.PI * 2, 0, casquete.apertura]} />
                 <Mate color={pelo} alpha={a} />
               </mesh>
             )}

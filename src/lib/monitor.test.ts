@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { pacienteDeSemilla, pacientesDeRonda } from "./pacientes";
 import {
+  alturaEcg,
+  DURACION_ANALISIS_MS,
   ENCABEZADO_MONITOR,
+  estadoMonitor,
+  PERIODO_BARRIDO_MS,
+  TEXTO_ANALIZANDO,
   colocacionMonitor,
   GIRO_MONITOR_Y,
   lineasMonitor,
@@ -81,5 +86,71 @@ describe("colocacionMonitor", () => {
     const movil = colocacionMonitor(390 / 844);
     expect(movil.posicion[0]).toBeLessThan(POS_MONITOR[0]);
     expect(movil.escala).toBeLessThan(1);
+  });
+});
+
+describe("animación de la pantalla (estadoMonitor)", () => {
+  it("primero analiza con una barra que avanza y luego muestra el resultado", () => {
+    expect(estadoMonitor(0)).toMatchObject({ fase: "analizando", progreso: 0 });
+    const medio = estadoMonitor(DURACION_ANALISIS_MS / 2);
+    expect(medio.fase).toBe("analizando");
+    expect(medio.progreso).toBeCloseTo(0.5, 5);
+    expect(estadoMonitor(DURACION_ANALISIS_MS - 1).fase).toBe("analizando");
+    expect(estadoMonitor(DURACION_ANALISIS_MS)).toMatchObject({ fase: "listo", progreso: 1 });
+    expect(estadoMonitor(60_000)).toMatchObject({ fase: "listo", progreso: 1 });
+  });
+
+  it("el progreso nunca retrocede ni sale de 0..1", () => {
+    let anterior = 0;
+    for (let t = -500; t <= DURACION_ANALISIS_MS + 500; t += 50) {
+      const { progreso } = estadoMonitor(t);
+      expect(progreso).toBeGreaterThanOrEqual(anterior);
+      expect(progreso).toBeLessThanOrEqual(1);
+      anterior = progreso;
+    }
+  });
+
+  it("el trazo del ECG barre la pantalla sin parar, también con el resultado a la vista", () => {
+    expect(estadoMonitor(0).barrido).toBe(0);
+    expect(estadoMonitor(PERIODO_BARRIDO_MS / 4).barrido).toBeCloseTo(0.25, 5);
+    expect(estadoMonitor(PERIODO_BARRIDO_MS).barrido).toBe(0);
+    expect(estadoMonitor(PERIODO_BARRIDO_MS * 7.5).barrido).toBeCloseTo(0.5, 5);
+    expect(estadoMonitor(PERIODO_BARRIDO_MS / 2).vueltas).toBe(0);
+    expect(estadoMonitor(PERIODO_BARRIDO_MS * 3.2).vueltas).toBe(3);
+  });
+
+  it("el cursor parpadea cada medio segundo", () => {
+    expect(estadoMonitor(0).cursor).toBe(true);
+    expect(estadoMonitor(499).cursor).toBe(true);
+    expect(estadoMonitor(500).cursor).toBe(false);
+    expect(estadoMonitor(1000).cursor).toBe(true);
+  });
+
+  it("con movimiento reducido la pantalla es estática: resultado listo, sin barrido ni cursor", () => {
+    for (const t of [0, 300, DURACION_ANALISIS_MS, 99_999]) {
+      expect(estadoMonitor(t, true)).toEqual({ fase: "listo", progreso: 1, barrido: null, vueltas: 0, cursor: false });
+    }
+  });
+
+  it("el texto de análisis no filtra la verdad del caso", () => {
+    expect(TEXTO_ANALIZANDO).toBe("Analizando muestra");
+    expect(PALABRAS_PROHIBIDAS.test(TEXTO_ANALIZANDO)).toBe(false);
+  });
+});
+
+describe("alturaEcg", () => {
+  it("es plano en los extremos, tiene un pico por latido y se repite", () => {
+    expect(alturaEcg(0)).toBe(0);
+    expect(alturaEcg(1)).toBe(0);
+    const muestras = Array.from({ length: 301 }, (_, i) => alturaEcg(i / 300));
+    expect(Math.max(...muestras)).toBeCloseTo(1, 1);
+    expect(Math.min(...muestras)).toBeCloseTo(-0.3, 5);
+    expect(muestras.filter((y, i) => y > 0.9 && muestras[i - 1] <= 0.9).length).toBe(3);
+    expect(alturaEcg(0.1)).toBeCloseTo(alturaEcg(0.1 + 1 / 3), 5);
+  });
+
+  it("fuera de 0..1 queda en la línea base", () => {
+    expect(alturaEcg(-0.2)).toBe(0);
+    expect(alturaEcg(1.4)).toBe(0);
   });
 });
